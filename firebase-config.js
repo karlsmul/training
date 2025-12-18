@@ -10,13 +10,21 @@
 // 6. Kopiere die Firebase-Config hierher
 
 const firebaseConfig = {
-  // Ersetze diese Platzhalter mit deinen echten Firebase-Credentials:
+
   apiKey: "AIzaSyBRg6cSo-1R4YJY3ElgxSe1dyKSSIlCygc",
+
   authDomain: "krafttraining-app.firebaseapp.com",
+
   projectId: "krafttraining-app",
+
   storageBucket: "krafttraining-app.firebasestorage.app",
+
   messagingSenderId: "671708020612",
-  appId: "1:671708020612:web:b77c08b0b4d12a390b67d1"
+
+  appId: "1:671708020612:web:b77c08b0b4d12a390b67d1",
+
+  measurementId: "G-7J32088TKB"
+
 };
 
 // Firebase initialisieren
