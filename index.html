@@ -49,21 +49,42 @@
             </section>
 
             <section class="history-section">
-                <div class="history-header">
-                    <h2>Trainingshistorie</h2>
-                    <button id="clearHistory" class="btn-secondary">Alle löschen</button>
+                <!-- Tab Navigation -->
+                <div class="tab-navigation">
+                    <button class="tab-btn active" data-tab="history">📊 Trainingshistorie</button>
+                    <button class="tab-btn" data-tab="records">🏆 Bestleistungen</button>
                 </div>
 
-                <div class="filter-section">
-                    <input type="text" id="searchExercise" placeholder="Übung suchen...">
-                    <select id="sortBy">
-                        <option value="date-desc">Neueste zuerst</option>
-                        <option value="date-asc">Älteste zuerst</option>
-                        <option value="exercise">Nach Übung</option>
-                    </select>
+                <!-- Training History Tab -->
+                <div id="historyTab" class="tab-content active">
+                    <div class="history-header">
+                        <h2>Trainingshistorie</h2>
+                        <button id="clearHistory" class="btn-secondary">Alle löschen</button>
+                    </div>
+
+                    <div class="filter-section">
+                        <input type="text" id="searchExercise" placeholder="Übung suchen...">
+                        <select id="sortBy">
+                            <option value="date-desc">Neueste zuerst</option>
+                            <option value="date-asc">Älteste zuerst</option>
+                            <option value="exercise">Nach Übung</option>
+                        </select>
+                    </div>
+
+                    <div id="trainingList" class="training-list"></div>
                 </div>
 
-                <div id="trainingList" class="training-list"></div>
+                <!-- Personal Records Tab -->
+                <div id="recordsTab" class="tab-content">
+                    <div class="records-header">
+                        <h2>Persönliche Bestleistungen</h2>
+                        <p class="records-subtitle">Die Big 3 Übungen</p>
+                    </div>
+
+                    <div id="recordsList" class="records-list">
+                        <!-- Personal Records werden hier angezeigt -->
+                    </div>
+                </div>
             </section>
         </main>
     </div>

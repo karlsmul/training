@@ -9,6 +9,7 @@ const dateInput = document.getElementById('date');
 const clearHistoryBtn = document.getElementById('clearHistory');
 const searchInput = document.getElementById('searchExercise');
 const sortSelect = document.getElementById('sortBy');
+const recordsList = document.getElementById('recordsList');
 
 // Aktuelles Datum anzeigen und als Standard setzen
 function setCurrentDate() {
@@ -37,6 +38,7 @@ form.addEventListener('submit', function(e) {
     trainings.push(newTraining);
     saveTrainings();
     displayTrainings();
+    displayPersonalRecords(); // PRs aktualisieren
     form.reset();
     setCurrentDate(); // Datum wieder auf heute setzen
 
@@ -55,6 +57,7 @@ function deleteTraining(id) {
         trainings = trainings.filter(training => training.id !== id);
         saveTrainings();
         displayTrainings();
+        displayPersonalRecords(); // PRs aktualisieren
         showNotification('Eintrag gelöscht!');
     }
 }
@@ -65,6 +68,7 @@ clearHistoryBtn.addEventListener('click', function() {
         trainings = [];
         saveTrainings();
         displayTrainings();
+        displayPersonalRecords(); // PRs aktualisieren
         showNotification('Alle Einträge gelöscht!');
     }
 });
@@ -232,6 +236,148 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Tab-Wechsel Funktionalität
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        const tabName = this.getAttribute('data-tab');
+
+        // Alle Tabs deaktivieren
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        // Aktiven Tab aktivieren
+        this.classList.add('active');
+        if (tabName === 'history') {
+            document.getElementById('historyTab').classList.add('active');
+        } else if (tabName === 'records') {
+            document.getElementById('recordsTab').classList.add('active');
+            displayPersonalRecords(); // PRs aktualisieren beim Tab-Wechsel
+        }
+    });
+});
+
+// Personal Records berechnen und anzeigen
+function displayPersonalRecords() {
+    // Die Big 3 Übungen mit verschiedenen Schreibweisen
+    const exercises = {
+        'Kniebeugen Front': {
+            names: ['kniebeugen front', 'front kniebeugen', 'frontkniebeugen', 'front squat', 'front squats'],
+            icon: '🦵',
+            color: 'gold'
+        },
+        'Bankdrücken': {
+            names: ['bankdrücken', 'bankdrücken', 'bench press', 'benchpress', 'flachbankdrücken'],
+            icon: '💪',
+            color: 'silver'
+        },
+        'Kreuzheben': {
+            names: ['kreuzheben', 'deadlift', 'deadlifts'],
+            icon: '🏋️',
+            color: 'bronze'
+        }
+    };
+
+    const records = {};
+
+    // Für jede Übung die Bestleistung finden
+    Object.keys(exercises).forEach(exerciseName => {
+        const exerciseData = exercises[exerciseName];
+
+        // Alle Trainings für diese Übung finden
+        const exerciseTrainings = trainings.filter(training => {
+            const trainingName = training.exercise.toLowerCase().trim();
+            return exerciseData.names.some(name => trainingName.includes(name));
+        });
+
+        if (exerciseTrainings.length > 0) {
+            // Bestleistung (höchstes Gewicht) finden
+            const bestTraining = exerciseTrainings.reduce((max, training) => {
+                return training.weight > max.weight ? training : max;
+            });
+
+            records[exerciseName] = {
+                ...bestTraining,
+                icon: exerciseData.icon,
+                color: exerciseData.color,
+                totalLifts: exerciseTrainings.length
+            };
+        }
+    });
+
+    // Records anzeigen
+    if (Object.keys(records).length === 0) {
+        recordsList.innerHTML = `
+            <div class="no-records">
+                <div class="no-records-icon">🏆</div>
+                <p>Noch keine Bestleistungen vorhanden</p>
+                <p class="no-records-hint">
+                    Füge Trainingseinträge für folgende Übungen hinzu:<br>
+                    <strong>Kniebeugen Front, Bankdrücken oder Kreuzheben</strong>
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    recordsList.innerHTML = Object.keys(exercises).map(exerciseName => {
+        const record = records[exerciseName];
+
+        if (!record) {
+            return `
+                <div class="record-card">
+                    <div class="record-exercise">
+                        <div class="record-icon">${exercises[exerciseName].icon}</div>
+                        <div class="record-name">${exerciseName}</div>
+                    </div>
+                    <div class="no-records" style="padding: 20px;">
+                        <p style="font-size: 1rem;">Noch keine Einträge für diese Übung</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        const date = new Date(record.date);
+        const formattedDate = date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric'
+        });
+
+        return `
+            <div class="record-card ${record.color}">
+                <div class="record-exercise">
+                    <div class="record-icon">${record.icon}</div>
+                    <div class="record-name">${exerciseName}</div>
+                </div>
+                <div class="record-stats">
+                    <div class="record-stat">
+                        <div class="record-stat-label">Maximales Gewicht</div>
+                        <div class="record-stat-value">
+                            ${record.weight}
+                            <span class="record-stat-unit">kg</span>
+                        </div>
+                    </div>
+                    <div class="record-stat">
+                        <div class="record-stat-label">Bei Wiederholungen</div>
+                        <div class="record-stat-value">
+                            ${record.sets} × ${record.reps}
+                        </div>
+                    </div>
+                </div>
+                <div class="record-date">
+                    <strong>Erreicht am:</strong> ${formattedDate}
+                    <br>
+                    <small>Gesamt: ${record.totalLifts} Trainingseinheiten</small>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 // Initialisierung
 setCurrentDate();
 displayTrainings();
+displayPersonalRecords();
