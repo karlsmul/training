@@ -136,13 +136,76 @@ select:focus {
 
 .training-list {
     display: grid;
-    gap: 15px;
+    gap: 25px;
     max-height: 600px;
     overflow-y: auto;
 }
 
+/* Datumsblock Container */
+.date-block {
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.date-block:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+/* Datum Header */
+.date-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.date-icon {
+    font-size: 1.8rem;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.date-title {
+    flex: 1;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+.exercise-count {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+/* Trainings Container innerhalb eines Datums */
+.date-trainings {
+    padding: 15px;
+    display: grid;
+    gap: 12px;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+}
+
 .training-item {
-    background: #f8f9fa;
+    background: #ffffff;
     border-left: 4px solid #667eea;
     padding: 15px;
     border-radius: 8px;
@@ -150,6 +213,7 @@ select:focus {
     grid-template-columns: 1fr auto;
     gap: 15px;
     transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .training-item:hover {
@@ -246,5 +310,23 @@ select:focus {
 
     .delete-btn {
         width: 100%;
+    }
+
+    .date-header {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .date-title {
+        font-size: 1.1rem;
+        width: 100%;
+    }
+
+    .exercise-count {
+        font-size: 0.85rem;
+    }
+
+    .date-icon {
+        font-size: 1.5rem;
     }
 }

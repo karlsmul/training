@@ -106,35 +106,70 @@ function displayTrainings() {
         return;
     }
 
-    trainingList.innerHTML = filteredTrainings.map(training => {
-        const date = new Date(training.date);
-        const formattedDate = date.toLocaleDateString('de-DE', {
+    // Trainings nach Datum gruppieren
+    const groupedByDate = {};
+    filteredTrainings.forEach(training => {
+        if (!groupedByDate[training.date]) {
+            groupedByDate[training.date] = [];
+        }
+        groupedByDate[training.date].push(training);
+    });
+
+    // Sortierte Datumskeys erstellen
+    const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
+        if (sortBy === 'date-asc') {
+            return new Date(a) - new Date(b);
+        }
+        return new Date(b) - new Date(a);
+    });
+
+    // HTML für gruppierte Trainings erstellen
+    trainingList.innerHTML = sortedDates.map(date => {
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('de-DE', {
+            weekday: 'long',
             day: '2-digit',
-            month: '2-digit',
+            month: 'long',
             year: 'numeric'
         });
 
-        return `
-            <div class="training-item">
-                <div class="training-info">
-                    <h3>${training.exercise}</h3>
-                    <div class="training-details">
-                        <div class="detail-item">
-                            <div class="detail-label">Gewicht</div>
-                            <div class="detail-value">${training.weight} kg</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Sätze</div>
-                            <div class="detail-value">${training.sets}</div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">Wdh.</div>
-                            <div class="detail-value">${training.reps}</div>
+        const trainingsOfDay = groupedByDate[date];
+
+        const trainingsHTML = trainingsOfDay.map(training => {
+            return `
+                <div class="training-item">
+                    <div class="training-info">
+                        <h3>${training.exercise}</h3>
+                        <div class="training-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Gewicht</div>
+                                <div class="detail-value">${training.weight} kg</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Sätze</div>
+                                <div class="detail-value">${training.sets}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Wdh.</div>
+                                <div class="detail-value">${training.reps}</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="training-date">📅 ${formattedDate}</div>
+                    <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
                 </div>
-                <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
+            `;
+        }).join('');
+
+        return `
+            <div class="date-block">
+                <div class="date-header">
+                    <div class="date-icon">📅</div>
+                    <h3 class="date-title">${formattedDate}</h3>
+                    <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
+                </div>
+                <div class="date-trainings">
+                    ${trainingsHTML}
+                </div>
             </div>
         `;
     }).join('');
