@@ -2,8 +2,25 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Krafttrainings App</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Tracke deine Krafttrainings-Einheiten und persönlichen Bestleistungen">
+    <meta name="theme-color" content="#667eea">
+
+    <!-- iOS Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Krafttraining">
+    <link rel="apple-touch-icon" href="icon.svg">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,6 +28,17 @@
         <header>
             <h1>💪 Krafttrainings App</h1>
             <p class="date" id="currentDate"></p>
+
+            <!-- Sync Status -->
+            <div class="sync-container">
+                <span id="syncIcon" class="sync-icon">📴</span>
+                <span id="syncStatus" class="sync-status offline">Lädt...</span>
+            </div>
+
+            <!-- User Info / Login Button -->
+            <div id="userInfo" class="user-info">
+                <button onclick="showLoginModal()" class="btn-login">Anmelden für Cloud-Sync</button>
+            </div>
         </header>
 
         <main>
@@ -92,6 +120,64 @@
         </main>
     </div>
 
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="hideLoginModal()">&times;</span>
+            <h2>🔐 Anmelden</h2>
+            <p>Melde dich an, um deine Trainings in der Cloud zu synchronisieren</p>
+
+            <button onclick="loginWithGoogle()" class="btn-google">
+                <span class="google-icon">G</span>
+                Mit Google anmelden
+            </button>
+
+            <div class="divider">
+                <span>oder</span>
+            </div>
+
+            <form id="emailLoginForm" onsubmit="event.preventDefault(); handleEmailLogin();">
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="E-Mail" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Passwort" required>
+                </div>
+                <button type="submit" class="btn-primary">Mit E-Mail anmelden</button>
+            </form>
+
+            <p class="modal-footer">
+                Noch kein Konto?
+                <a href="#" onclick="event.preventDefault(); handleEmailRegister();">Registrieren</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Firebase Config & Sync -->
+    <script src="firebase-config.js"></script>
+    <script src="sync.js"></script>
+
+    <!-- Main App -->
     <script src="app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registriert:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker Registrierung fehlgeschlagen:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

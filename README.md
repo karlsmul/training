@@ -1,18 +1,42 @@
 # 💪 Krafttrainings App
 
-Eine einfache, benutzerfreundliche Web-Anwendung zum Tracken deiner Krafttrainings-Einheiten.
+Eine moderne Progressive Web App zum Tracken deiner Krafttrainings-Einheiten mit Cloud-Synchronisation!
 
-## Features
+## ✨ Features
 
-- ✅ Übungen mit Gewicht, Sätzen und Wiederholungen eintragen
-- ✅ Datum für jede Trainingseinheit erfassen
-- ✅ Vollständige Trainingshistorie anzeigen
-- ✅ Nach Übungen suchen
-- ✅ Sortierung nach Datum oder Übungsname
-- ✅ Einzelne Einträge löschen
-- ✅ Komplette Historie löschen
-- ✅ Daten werden lokal im Browser gespeichert (localStorage)
-- ✅ Responsive Design für mobile Geräte
+### 📊 Trainings-Tracking
+- Übungen mit Gewicht, Sätzen und Wiederholungen eintragen
+- Trainings bearbeiten und löschen
+- Nach Datum gruppierte Anzeige
+- Nach Übungen suchen
+- Verschiedene Sortieroptionen
+
+### 🏆 Persönliche Bestleistungen
+- Automatische Berechnung für die "Big 3":
+  - 🦵 Kniebeugen Front
+  - 💪 Bankdrücken
+  - 🏋️ Kreuzheben
+- Maximales Gewicht, Wiederholungen und Datum
+- Gesamt-Trainingseinheiten pro Übung
+
+### 🔄 Cloud-Synchronisation
+- Automatische Synchronisation zwischen allen Geräten
+- Offline-First: Funktioniert auch ohne Internet
+- Echtzeit-Updates
+- Automatisches Backup in der Cloud
+- Login mit Google oder E-Mail/Passwort
+
+### 📱 Progressive Web App (PWA)
+- Installierbar auf iPhone/iPad/Android
+- Funktioniert wie eine native App
+- Vollständige Offline-Funktionalität
+- Schnell & zuverlässig
+
+### 🎨 Modernes Design
+- Responsive für alle Bildschirmgrößen
+- Schöne Animationen und Übergänge
+- Intuitive Benutzeroberfläche
+- Dark Mode kompatibel
 
 ## Installation & Nutzung
 

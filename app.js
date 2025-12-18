@@ -31,14 +31,16 @@ function setCurrentDate() {
 }
 
 // Training hinzufügen oder bearbeiten
-form.addEventListener('submit', function(e) {
+form.addEventListener('submit', async function(e) {
     e.preventDefault();
+
+    let training;
 
     if (editMode) {
         // Training bearbeiten
         const trainingIndex = trainings.findIndex(t => t.id === editingId);
         if (trainingIndex !== -1) {
-            trainings[trainingIndex] = {
+            training = {
                 id: editingId,
                 exercise: document.getElementById('exercise').value,
                 weight: parseFloat(document.getElementById('weight').value),
@@ -46,12 +48,18 @@ form.addEventListener('submit', function(e) {
                 reps: parseInt(document.getElementById('reps').value),
                 date: document.getElementById('date').value
             };
+            trainings[trainingIndex] = training;
             showNotification('Training erfolgreich aktualisiert!');
+
+            // Zu Cloud synchronisieren
+            if (typeof syncToCloud === 'function') {
+                await syncToCloud(training);
+            }
         }
         cancelEdit();
     } else {
         // Neues Training hinzufügen
-        const newTraining = {
+        training = {
             id: Date.now(),
             exercise: document.getElementById('exercise').value,
             weight: parseFloat(document.getElementById('weight').value),
@@ -59,8 +67,14 @@ form.addEventListener('submit', function(e) {
             reps: parseInt(document.getElementById('reps').value),
             date: document.getElementById('date').value
         };
-        trainings.push(newTraining);
+        trainings.push(training);
         showNotification('Training erfolgreich hinzugefügt!');
+
+        // Zu Cloud synchronisieren
+        if (typeof syncToCloud === 'function') {
+            await syncToCloud(training);
+        }
+
         form.reset();
         setCurrentDate();
     }
@@ -121,12 +135,18 @@ function cancelEdit() {
 cancelBtn.addEventListener('click', cancelEdit);
 
 // Training löschen
-function deleteTraining(id) {
+async function deleteTraining(id) {
     if (confirm('Möchtest du diesen Eintrag wirklich löschen?')) {
         trainings = trainings.filter(training => training.id !== id);
         saveTrainings();
         displayTrainings();
         displayPersonalRecords(); // PRs aktualisieren
+
+        // Aus Cloud löschen
+        if (typeof deleteFromCloud === 'function') {
+            await deleteFromCloud(id);
+        }
+
         showNotification('Eintrag gelöscht!');
     }
 }
@@ -449,7 +469,39 @@ function displayPersonalRecords() {
     }).join('');
 }
 
+// Email Login Handler
+function handleEmailLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    loginWithEmail(email, password);
+    hideLoginModal();
+}
+
+// Email Registrierung Handler
+function handleEmailRegister() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) {
+        showNotification('Bitte E-Mail und Passwort eingeben');
+        return;
+    }
+    registerWithEmail(email, password);
+    hideLoginModal();
+}
+
+// Export für globale Verwendung
+window.handleEmailLogin = handleEmailLogin;
+window.handleEmailRegister = handleEmailRegister;
+
 // Initialisierung
-setCurrentDate();
-displayTrainings();
-displayPersonalRecords();
+async function initApp() {
+    setCurrentDate();
+    displayTrainings();
+    displayPersonalRecords();
+
+    // Sync initialisieren
+    await initSync();
+}
+
+// App starten
+initApp();
