@@ -183,34 +183,79 @@ function mergeTrainings(local, cloud) {
 // Login mit Google
 async function loginWithGoogle() {
   try {
+    // Prüfe ob Firebase konfiguriert ist
+    if (!auth) {
+      showNotification('⚠️ Firebase noch nicht konfiguriert! Bitte siehe FIREBASE_SETUP.md');
+      console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
+      return;
+    }
+
     const provider = new firebase.auth.GoogleAuthProvider();
     await auth.signInWithPopup(provider);
     showNotification('Erfolgreich angemeldet!');
+    hideLoginModal();
   } catch (error) {
     console.error('Login-Fehler:', error);
-    showNotification('Login fehlgeschlagen: ' + error.message);
+    if (error.code === 'auth/popup-closed-by-user') {
+      showNotification('Login abgebrochen');
+    } else {
+      showNotification('Login fehlgeschlagen: ' + error.message);
+    }
   }
 }
 
 // Login mit E-Mail
 async function loginWithEmail(email, password) {
   try {
+    // Prüfe ob Firebase konfiguriert ist
+    if (!auth) {
+      showNotification('⚠️ Firebase noch nicht konfiguriert! Bitte siehe FIREBASE_SETUP.md');
+      console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
+      return;
+    }
+
     await auth.signInWithEmailAndPassword(email, password);
     showNotification('Erfolgreich angemeldet!');
+    hideLoginModal();
   } catch (error) {
     console.error('Login-Fehler:', error);
-    showNotification('Login fehlgeschlagen: ' + error.message);
+    if (error.code === 'auth/user-not-found') {
+      showNotification('Benutzer nicht gefunden. Bitte registrieren.');
+    } else if (error.code === 'auth/wrong-password') {
+      showNotification('Falsches Passwort');
+    } else {
+      showNotification('Login fehlgeschlagen: ' + error.message);
+    }
   }
 }
 
 // Registrierung mit E-Mail
 async function registerWithEmail(email, password) {
   try {
+    // Prüfe ob Firebase konfiguriert ist
+    if (!auth) {
+      showNotification('⚠️ Firebase noch nicht konfiguriert! Bitte siehe FIREBASE_SETUP.md');
+      console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
+      return;
+    }
+
+    if (password.length < 6) {
+      showNotification('Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+
     await auth.createUserWithEmailAndPassword(email, password);
     showNotification('Konto erstellt und angemeldet!');
+    hideLoginModal();
   } catch (error) {
     console.error('Registrierungs-Fehler:', error);
-    showNotification('Registrierung fehlgeschlagen: ' + error.message);
+    if (error.code === 'auth/email-already-in-use') {
+      showNotification('E-Mail bereits registriert. Bitte anmelden.');
+    } else if (error.code === 'auth/invalid-email') {
+      showNotification('Ungültige E-Mail-Adresse');
+    } else {
+      showNotification('Registrierung fehlgeschlagen: ' + error.message);
+    }
   }
 }
 
@@ -269,13 +314,29 @@ function hideUserInfo() {
   const userInfoElement = document.getElementById('userInfo');
   if (!userInfoElement) return;
 
-  userInfoElement.innerHTML = `
-    <button onclick="showLoginModal()" class="btn-login">Anmelden für Cloud-Sync</button>
-  `;
+  // Prüfe ob Firebase konfiguriert ist
+  if (!auth) {
+    userInfoElement.innerHTML = `
+      <div style="background: rgba(255,255,255,0.15); padding: 12px 20px; border-radius: 25px; color: white; font-size: 0.85rem; text-align: center; max-width: 500px;">
+        ⚠️ Cloud-Sync nicht verfügbar - Firebase Setup erforderlich (siehe Dokumentation)
+      </div>
+    `;
+  } else {
+    userInfoElement.innerHTML = `
+      <button onclick="showLoginModal()" class="btn-login">Anmelden für Cloud-Sync</button>
+    `;
+  }
 }
 
 // Login-Modal anzeigen
 function showLoginModal() {
+  // Prüfe ob Firebase konfiguriert ist
+  if (!auth) {
+    showNotification('⚠️ Firebase noch nicht konfiguriert! Siehe FIREBASE_SETUP.md für Anleitung');
+    console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
+    return;
+  }
+
   const modal = document.getElementById('loginModal');
   if (modal) {
     modal.style.display = 'flex';
