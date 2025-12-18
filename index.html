@@ -15,7 +15,7 @@
 
         <main>
             <section class="input-section">
-                <h2>Neues Training eintragen</h2>
+                <h2 id="formTitle">Neues Training eintragen</h2>
                 <form id="trainingForm">
                     <div class="form-group">
                         <label for="exercise">Übung:</label>
@@ -44,7 +44,10 @@
                         <input type="date" id="date" required>
                     </div>
 
-                    <button type="submit" class="btn-primary">Eintrag hinzufügen</button>
+                    <div class="form-buttons">
+                        <button type="submit" class="btn-primary" id="submitBtn">Eintrag hinzufügen</button>
+                        <button type="button" class="btn-cancel" id="cancelBtn" style="display: none;">Abbrechen</button>
+                    </div>
                 </form>
             </section>
 

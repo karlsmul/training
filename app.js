@@ -1,6 +1,10 @@
 // Trainingseinträge aus localStorage laden
 let trainings = JSON.parse(localStorage.getItem('trainings')) || [];
 
+// Edit-Modus Tracking
+let editMode = false;
+let editingId = null;
+
 // DOM Elemente
 const form = document.getElementById('trainingForm');
 const trainingList = document.getElementById('trainingList');
@@ -10,6 +14,10 @@ const clearHistoryBtn = document.getElementById('clearHistory');
 const searchInput = document.getElementById('searchExercise');
 const sortSelect = document.getElementById('sortBy');
 const recordsList = document.getElementById('recordsList');
+const formTitle = document.getElementById('formTitle');
+const submitBtn = document.getElementById('submitBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const inputSection = document.querySelector('.input-section');
 
 // Aktuelles Datum anzeigen und als Standard setzen
 function setCurrentDate() {
@@ -22,34 +30,95 @@ function setCurrentDate() {
     dateInput.value = dateString;
 }
 
-// Training hinzufügen
+// Training hinzufügen oder bearbeiten
 form.addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const newTraining = {
-        id: Date.now(),
-        exercise: document.getElementById('exercise').value,
-        weight: parseFloat(document.getElementById('weight').value),
-        sets: parseInt(document.getElementById('sets').value),
-        reps: parseInt(document.getElementById('reps').value),
-        date: document.getElementById('date').value
-    };
+    if (editMode) {
+        // Training bearbeiten
+        const trainingIndex = trainings.findIndex(t => t.id === editingId);
+        if (trainingIndex !== -1) {
+            trainings[trainingIndex] = {
+                id: editingId,
+                exercise: document.getElementById('exercise').value,
+                weight: parseFloat(document.getElementById('weight').value),
+                sets: parseInt(document.getElementById('sets').value),
+                reps: parseInt(document.getElementById('reps').value),
+                date: document.getElementById('date').value
+            };
+            showNotification('Training erfolgreich aktualisiert!');
+        }
+        cancelEdit();
+    } else {
+        // Neues Training hinzufügen
+        const newTraining = {
+            id: Date.now(),
+            exercise: document.getElementById('exercise').value,
+            weight: parseFloat(document.getElementById('weight').value),
+            sets: parseInt(document.getElementById('sets').value),
+            reps: parseInt(document.getElementById('reps').value),
+            date: document.getElementById('date').value
+        };
+        trainings.push(newTraining);
+        showNotification('Training erfolgreich hinzugefügt!');
+        form.reset();
+        setCurrentDate();
+    }
 
-    trainings.push(newTraining);
     saveTrainings();
     displayTrainings();
     displayPersonalRecords(); // PRs aktualisieren
-    form.reset();
-    setCurrentDate(); // Datum wieder auf heute setzen
-
-    // Erfolgs-Feedback
-    showNotification('Training erfolgreich hinzugefügt!');
 });
 
 // Trainings in localStorage speichern
 function saveTrainings() {
     localStorage.setItem('trainings', JSON.stringify(trainings));
 }
+
+// Training bearbeiten
+function editTraining(id) {
+    const training = trainings.find(t => t.id === id);
+    if (!training) return;
+
+    // Wechsel in Edit-Modus
+    editMode = true;
+    editingId = id;
+
+    // Formular mit Trainingsdaten füllen
+    document.getElementById('exercise').value = training.exercise;
+    document.getElementById('weight').value = training.weight;
+    document.getElementById('sets').value = training.sets;
+    document.getElementById('reps').value = training.reps;
+    document.getElementById('date').value = training.date;
+
+    // UI anpassen
+    formTitle.textContent = 'Training bearbeiten ✏️';
+    submitBtn.textContent = 'Änderungen speichern';
+    cancelBtn.style.display = 'block';
+    inputSection.classList.add('editing');
+
+    // Zum Formular scrollen
+    inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Bearbeitung abbrechen
+function cancelEdit() {
+    editMode = false;
+    editingId = null;
+
+    // Formular zurücksetzen
+    form.reset();
+    setCurrentDate();
+
+    // UI zurücksetzen
+    formTitle.textContent = 'Neues Training eintragen';
+    submitBtn.textContent = 'Eintrag hinzufügen';
+    cancelBtn.style.display = 'none';
+    inputSection.classList.remove('editing');
+}
+
+// Event Listener für Abbrechen-Button
+cancelBtn.addEventListener('click', cancelEdit);
 
 // Training löschen
 function deleteTraining(id) {
@@ -159,7 +228,10 @@ function displayTrainings() {
                             </div>
                         </div>
                     </div>
-                    <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
+                    <div class="training-actions">
+                        <button class="edit-btn" onclick="editTraining(${training.id})">Bearbeiten</button>
+                        <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
+                    </div>
                 </div>
             `;
         }).join('');
