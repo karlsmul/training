@@ -390,16 +390,33 @@ function displayTrainings() {
                 const setsMatch = actualSets >= plannedSets;
                 const repsMatch = avgReps >= plannedReps;
 
+                let comparisonItems = '';
+
+                // Gewichtsvergleich (nur wenn Plan ein Gewicht hat und Training gewichtsbasiert ist)
+                if (plan.weight && training.trainingType === 'weight') {
+                    const weightMatch = training.weight >= plan.weight;
+                    comparisonItems += `
+                        <div class="comparison-item ${weightMatch ? 'success' : 'warning'}">
+                            <span>Gewicht: ${training.weight}/${plan.weight} kg</span>
+                            ${weightMatch ? '✅' : '⚠️'}
+                        </div>
+                    `;
+                }
+
+                comparisonItems += `
+                    <div class="comparison-item ${setsMatch ? 'success' : 'warning'}">
+                        <span>Sätze: ${actualSets}/${plannedSets}</span>
+                        ${setsMatch ? '✅' : '⚠️'}
+                    </div>
+                    <div class="comparison-item ${repsMatch ? 'success' : 'warning'}">
+                        <span>Ø Wdh.: ${avgReps}/${plannedReps}</span>
+                        ${repsMatch ? '✅' : '⚠️'}
+                    </div>
+                `;
+
                 planComparisonHTML = `
                     <div class="plan-comparison">
-                        <div class="comparison-item ${setsMatch ? 'success' : 'warning'}">
-                            <span>Sätze: ${actualSets}/${plannedSets}</span>
-                            ${setsMatch ? '✅' : '⚠️'}
-                        </div>
-                        <div class="comparison-item ${repsMatch ? 'success' : 'warning'}">
-                            <span>Ø Wdh.: ${avgReps}/${plannedReps}</span>
-                            ${repsMatch ? '✅' : '⚠️'}
-                        </div>
+                        ${comparisonItems}
                     </div>
                 `;
             }
@@ -589,9 +606,12 @@ function displayPersonalRecords() {
 planForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    const weightValue = document.getElementById('planWeight').value;
+
     const plan = {
         id: Date.now(),
         exercise: document.getElementById('planExercise').value,
+        weight: weightValue ? parseFloat(weightValue) : null,
         sets: parseInt(document.getElementById('planSets').value),
         reps: parseInt(document.getElementById('planReps').value)
     };
@@ -625,6 +645,7 @@ function displayTrainingPlans() {
             <div class="plan-info">
                 <h3>${plan.exercise}</h3>
                 <div class="plan-details">
+                    ${plan.weight ? `<span><strong>Soll Gewicht:</strong> ${plan.weight} kg</span>` : ''}
                     <span><strong>Soll Sätze:</strong> ${plan.sets}</span>
                     <span><strong>Soll Wiederholungen:</strong> ${plan.reps}</span>
                 </div>

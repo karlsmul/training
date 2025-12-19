@@ -117,6 +117,7 @@ async function syncPlanToCloud(plan) {
       .doc(plan.id.toString())
       .set({
         exercise: plan.exercise,
+        weight: plan.weight,
         sets: plan.sets,
         reps: plan.reps,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
