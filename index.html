@@ -50,20 +50,40 @@
                         <input type="text" id="exercise" required placeholder="z.B. Bankdrücken">
                     </div>
 
+                    <!-- Toggle zwischen Gewicht und Zeit -->
                     <div class="form-group">
-                        <label for="weight">Gewicht (kg):</label>
-                        <input type="number" id="weight" step="0.5" required placeholder="z.B. 80">
+                        <label>Trainingsart:</label>
+                        <div class="training-type-toggle">
+                            <button type="button" class="toggle-btn active" data-type="weight">⚖️ Gewicht</button>
+                            <button type="button" class="toggle-btn" data-type="time">⏱️ Zeit</button>
+                        </div>
                     </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="sets">Sätze:</label>
-                            <input type="number" id="sets" min="1" required placeholder="z.B. 3">
-                        </div>
+                    <!-- Gewicht Input -->
+                    <div class="form-group" id="weightGroup">
+                        <label for="weight">Gewicht (kg):</label>
+                        <input type="number" id="weight" step="0.5" placeholder="z.B. 80">
+                    </div>
 
-                        <div class="form-group">
-                            <label for="reps">Wiederholungen:</label>
-                            <input type="number" id="reps" min="1" required placeholder="z.B. 10">
+                    <!-- Zeit Input (versteckt) -->
+                    <div class="form-group" id="timeGroup" style="display: none;">
+                        <label for="time">Zeit:</label>
+                        <div class="time-input-group">
+                            <input type="number" id="timeMinutes" min="0" placeholder="Min" style="width: 48%;">
+                            <input type="number" id="timeSeconds" min="0" max="59" placeholder="Sek" style="width: 48%;">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sets">Anzahl Sätze:</label>
+                        <input type="number" id="sets" min="1" max="10" value="3" required>
+                    </div>
+
+                    <!-- Wiederholungen pro Satz -->
+                    <div class="form-group">
+                        <label>Wiederholungen pro Satz:</label>
+                        <div id="repsInputs" class="reps-inputs">
+                            <!-- Dynamisch generiert -->
                         </div>
                     </div>
 
@@ -82,8 +102,11 @@
             <section class="history-section">
                 <!-- Tab Navigation -->
                 <div class="tab-navigation">
-                    <button class="tab-btn active" data-tab="history">📊 Trainingshistorie</button>
-                    <button class="tab-btn" data-tab="records">🏆 Bestleistungen</button>
+                    <button class="tab-btn active" data-tab="history">📊 Historie</button>
+                    <button class="tab-btn" data-tab="plan">📋 Plan</button>
+                    <button class="tab-btn" data-tab="records">🏆 PRs</button>
+                    <button class="tab-btn" data-tab="stats">📈 Auswertung</button>
+                    <button class="tab-btn" data-tab="settings">⚙️ Einstellungen</button>
                 </div>
 
                 <!-- Training History Tab -->
@@ -105,6 +128,40 @@
                     <div id="trainingList" class="training-list"></div>
                 </div>
 
+                <!-- Training Plan Tab -->
+                <div id="planTab" class="tab-content">
+                    <div class="plan-header">
+                        <h2>Trainingsplan</h2>
+                        <p class="plan-subtitle">Plane deine nächsten Trainings</p>
+                    </div>
+
+                    <div class="plan-form-container">
+                        <form id="planForm">
+                            <div class="form-group">
+                                <label for="planExercise">Übung:</label>
+                                <input type="text" id="planExercise" required placeholder="z.B. Bankdrücken">
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="planSets">Soll Sätze:</label>
+                                    <input type="number" id="planSets" min="1" max="10" value="3" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="planReps">Soll Wiederholungen:</label>
+                                    <input type="number" id="planReps" min="1" required placeholder="z.B. 10">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-primary">Plan hinzufügen</button>
+                        </form>
+                    </div>
+
+                    <div id="planList" class="plan-list">
+                        <!-- Trainingsplan wird hier angezeigt -->
+                    </div>
+                </div>
+
                 <!-- Personal Records Tab -->
                 <div id="recordsTab" class="tab-content">
                     <div class="records-header">
@@ -114,6 +171,90 @@
 
                     <div id="recordsList" class="records-list">
                         <!-- Personal Records werden hier angezeigt -->
+                    </div>
+                </div>
+
+                <!-- Statistics Tab -->
+                <div id="statsTab" class="tab-content">
+                    <div class="stats-header">
+                        <h2>Auswertung & Statistiken</h2>
+                    </div>
+
+                    <!-- Körpergewicht Chart -->
+                    <div class="chart-container">
+                        <h3>Körpergewicht-Entwicklung</h3>
+                        <canvas id="bodyWeightChart"></canvas>
+                    </div>
+
+                    <!-- Personal Records Chart -->
+                    <div class="chart-container">
+                        <h3>Persönliche Bestleistungen</h3>
+                        <canvas id="personalRecordsChart"></canvas>
+                    </div>
+
+                    <!-- Trainingshäufigkeit -->
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <div class="stat-icon">📅</div>
+                            <div class="stat-label">Trainings diesen Monat</div>
+                            <div class="stat-value" id="monthlyTrainings">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-label">Durchschnitt pro Monat</div>
+                            <div class="stat-value" id="avgMonthlyTrainings">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">💪</div>
+                            <div class="stat-label">Gesamt Trainings</div>
+                            <div class="stat-value" id="totalTrainings">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settingsTab" class="tab-content">
+                    <div class="settings-header">
+                        <h2>Einstellungen</h2>
+                    </div>
+
+                    <!-- Körperdaten -->
+                    <div class="settings-section">
+                        <h3>Körperdaten</h3>
+                        <form id="bodyDataForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="bodyWeight">Körpergewicht (kg):</label>
+                                    <input type="number" id="bodyWeight" step="0.1" placeholder="z.B. 75.5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="bodyWeightDate">Datum:</label>
+                                    <input type="date" id="bodyWeightDate" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Gewicht hinzufügen</button>
+                        </form>
+
+                        <div id="bodyWeightHistory" class="body-weight-history">
+                            <!-- Gewichtshistorie wird hier angezeigt -->
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Persönliche Informationen</h3>
+                        <form id="personalInfoForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="age">Alter:</label>
+                                    <input type="number" id="age" min="1" placeholder="z.B. 25">
+                                </div>
+                                <div class="form-group">
+                                    <label for="height">Körpergröße (cm):</label>
+                                    <input type="number" id="height" min="1" placeholder="z.B. 180">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Speichern</button>
+                        </form>
                     </div>
                 </div>
             </section>
@@ -152,6 +293,9 @@
             </p>
         </div>
     </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>

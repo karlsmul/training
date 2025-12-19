@@ -89,7 +89,10 @@ async function syncToCloud(training) {
       .doc(training.id.toString())
       .set({
         exercise: training.exercise,
+        trainingType: training.trainingType || 'weight',
         weight: training.weight,
+        timeMinutes: training.timeMinutes,
+        timeSeconds: training.timeSeconds,
         sets: training.sets,
         reps: training.reps,
         date: training.date,
@@ -100,6 +103,68 @@ async function syncToCloud(training) {
   } catch (error) {
     console.error('Upload-Fehler:', error);
     // Fehler wird später beim nächsten Sync erneut versucht
+  }
+}
+
+// Trainingsplan zu Cloud synchronisieren
+async function syncPlanToCloud(plan) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('plans')
+      .doc(plan.id.toString())
+      .set({
+        exercise: plan.exercise,
+        sets: plan.sets,
+        reps: plan.reps,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    console.log('Trainingsplan zu Cloud synchronisiert:', plan.id);
+  } catch (error) {
+    console.error('Plan Upload-Fehler:', error);
+  }
+}
+
+// Körpergewicht zu Cloud synchronisieren
+async function syncBodyWeightToCloud(weight) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('bodyWeights')
+      .doc(weight.id.toString())
+      .set({
+        weight: weight.weight,
+        date: weight.date,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    console.log('Körpergewicht zu Cloud synchronisiert:', weight.id);
+  } catch (error) {
+    console.error('Body Weight Upload-Fehler:', error);
+  }
+}
+
+// Persönliche Info zu Cloud synchronisieren
+async function syncPersonalInfoToCloud(info) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .set({
+        age: info.age,
+        height: info.height,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+    console.log('Persönliche Info zu Cloud synchronisiert');
+  } catch (error) {
+    console.error('Personal Info Upload-Fehler:', error);
   }
 }
 
@@ -117,6 +182,40 @@ async function deleteFromCloud(id) {
     console.log('Training aus Cloud gelöscht:', id);
   } catch (error) {
     console.error('Lösch-Fehler:', error);
+  }
+}
+
+// Plan aus Cloud löschen
+async function deletePlanFromCloud(id) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('plans')
+      .doc(id.toString())
+      .delete();
+
+    console.log('Plan aus Cloud gelöscht:', id);
+  } catch (error) {
+    console.error('Plan Lösch-Fehler:', error);
+  }
+}
+
+// Körpergewicht aus Cloud löschen
+async function deleteBodyWeightFromCloud(id) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('bodyWeights')
+      .doc(id.toString())
+      .delete();
+
+    console.log('Körpergewicht aus Cloud gelöscht:', id);
+  } catch (error) {
+    console.error('Body Weight Lösch-Fehler:', error);
   }
 }
 
@@ -362,7 +461,12 @@ function formatTime(date) {
 // Export für globale Verwendung
 window.initSync = initSync;
 window.syncToCloud = syncToCloud;
+window.syncPlanToCloud = syncPlanToCloud;
+window.syncBodyWeightToCloud = syncBodyWeightToCloud;
+window.syncPersonalInfoToCloud = syncPersonalInfoToCloud;
 window.deleteFromCloud = deleteFromCloud;
+window.deletePlanFromCloud = deletePlanFromCloud;
+window.deleteBodyWeightFromCloud = deleteBodyWeightFromCloud;
 window.loginWithGoogle = loginWithGoogle;
 window.loginWithEmail = loginWithEmail;
 window.registerWithEmail = registerWithEmail;

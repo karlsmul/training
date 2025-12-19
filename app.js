@@ -1,11 +1,24 @@
+// ========================================
+// DATA MANAGEMENT
+// ========================================
+
 // Trainingseinträge aus localStorage laden
 let trainings = JSON.parse(localStorage.getItem('trainings')) || [];
+let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
+let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
+let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
 
 // Edit-Modus Tracking
 let editMode = false;
 let editingId = null;
 
-// DOM Elemente
+// Training Type (weight or time)
+let currentTrainingType = 'weight';
+
+// ========================================
+// DOM ELEMENTE
+// ========================================
+
 const form = document.getElementById('trainingForm');
 const trainingList = document.getElementById('trainingList');
 const currentDateElement = document.getElementById('currentDate');
@@ -18,21 +31,108 @@ const formTitle = document.getElementById('formTitle');
 const submitBtn = document.getElementById('submitBtn');
 const cancelBtn = document.getElementById('cancelBtn');
 const inputSection = document.querySelector('.input-section');
+const setsInput = document.getElementById('sets');
+const repsInputsContainer = document.getElementById('repsInputs');
+const weightGroup = document.getElementById('weightGroup');
+const timeGroup = document.getElementById('timeGroup');
+const toggleBtns = document.querySelectorAll('.toggle-btn');
 
-// Aktuelles Datum anzeigen und als Standard setzen
+// Plan elements
+const planForm = document.getElementById('planForm');
+const planList = document.getElementById('planList');
+
+// Settings elements
+const bodyDataForm = document.getElementById('bodyDataForm');
+const bodyWeightHistory = document.getElementById('bodyWeightHistory');
+const personalInfoForm = document.getElementById('personalInfoForm');
+
+// ========================================
+// INITIALISIERUNG
+// ========================================
+
 function setCurrentDate() {
     const today = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     currentDateElement.textContent = today.toLocaleDateString('de-DE', options);
 
-    // Datum-Input auf heute setzen
     const dateString = today.toISOString().split('T')[0];
     dateInput.value = dateString;
+
+    // Auch für Body Weight Date
+    const bodyWeightDateInput = document.getElementById('bodyWeightDate');
+    if (bodyWeightDateInput) {
+        bodyWeightDateInput.value = dateString;
+    }
 }
 
-// Training hinzufügen oder bearbeiten
+// ========================================
+// TRAINING TYPE TOGGLE (Gewicht/Zeit)
+// ========================================
+
+toggleBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        currentTrainingType = this.getAttribute('data-type');
+
+        if (currentTrainingType === 'weight') {
+            weightGroup.style.display = 'block';
+            timeGroup.style.display = 'none';
+            document.getElementById('weight').required = true;
+            document.getElementById('timeMinutes').required = false;
+            document.getElementById('timeSeconds').required = false;
+        } else {
+            weightGroup.style.display = 'none';
+            timeGroup.style.display = 'block';
+            document.getElementById('weight').required = false;
+            document.getElementById('timeMinutes').required = true;
+            document.getElementById('timeSeconds').required = true;
+        }
+    });
+});
+
+// ========================================
+// REPS INPUTS DYNAMISCH GENERIEREN
+// ========================================
+
+setsInput.addEventListener('input', generateRepsInputs);
+
+function generateRepsInputs() {
+    const numSets = parseInt(setsInput.value) || 3;
+    repsInputsContainer.innerHTML = '';
+
+    for (let i = 1; i <= numSets; i++) {
+        const repInputGroup = document.createElement('div');
+        repInputGroup.className = 'rep-input-group';
+
+        repInputGroup.innerHTML = `
+            <label for="rep${i}">Satz ${i}</label>
+            <input type="number" id="rep${i}" min="1" placeholder="Wdh." required>
+        `;
+
+        repsInputsContainer.appendChild(repInputGroup);
+    }
+}
+
+// Initial generieren
+generateRepsInputs();
+
+// ========================================
+// TRAINING HINZUFÜGEN/BEARBEITEN
+// ========================================
+
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
+
+    const numSets = parseInt(setsInput.value);
+    const reps = [];
+
+    // Wiederholungen pro Satz sammeln
+    for (let i = 1; i <= numSets; i++) {
+        const repValue = parseInt(document.getElementById(`rep${i}`).value);
+        reps.push(repValue);
+    }
 
     let training;
 
@@ -43,15 +143,17 @@ form.addEventListener('submit', async function(e) {
             training = {
                 id: editingId,
                 exercise: document.getElementById('exercise').value,
-                weight: parseFloat(document.getElementById('weight').value),
-                sets: parseInt(document.getElementById('sets').value),
-                reps: parseInt(document.getElementById('reps').value),
+                trainingType: currentTrainingType,
+                weight: currentTrainingType === 'weight' ? parseFloat(document.getElementById('weight').value) : null,
+                timeMinutes: currentTrainingType === 'time' ? parseInt(document.getElementById('timeMinutes').value) || 0 : null,
+                timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
+                sets: numSets,
+                reps: reps,
                 date: document.getElementById('date').value
             };
             trainings[trainingIndex] = training;
             showNotification('Training erfolgreich aktualisiert!');
 
-            // Zu Cloud synchronisieren
             if (typeof syncToCloud === 'function') {
                 await syncToCloud(training);
             }
@@ -62,48 +164,82 @@ form.addEventListener('submit', async function(e) {
         training = {
             id: Date.now(),
             exercise: document.getElementById('exercise').value,
-            weight: parseFloat(document.getElementById('weight').value),
-            sets: parseInt(document.getElementById('sets').value),
-            reps: parseInt(document.getElementById('reps').value),
+            trainingType: currentTrainingType,
+            weight: currentTrainingType === 'weight' ? parseFloat(document.getElementById('weight').value) : null,
+            timeMinutes: currentTrainingType === 'time' ? parseInt(document.getElementById('timeMinutes').value) || 0 : null,
+            timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
+            sets: numSets,
+            reps: reps,
             date: document.getElementById('date').value
         };
         trainings.push(training);
         showNotification('Training erfolgreich hinzugefügt!');
 
-        // Zu Cloud synchronisieren
         if (typeof syncToCloud === 'function') {
             await syncToCloud(training);
         }
 
         form.reset();
         setCurrentDate();
+        generateRepsInputs();
     }
 
     saveTrainings();
     displayTrainings();
-    displayPersonalRecords(); // PRs aktualisieren
+    displayPersonalRecords();
+    updateStatistics();
 });
 
-// Trainings in localStorage speichern
 function saveTrainings() {
     localStorage.setItem('trainings', JSON.stringify(trainings));
 }
 
-// Training bearbeiten
+// ========================================
+// TRAINING BEARBEITEN
+// ========================================
+
 function editTraining(id) {
     const training = trainings.find(t => t.id === id);
     if (!training) return;
 
-    // Wechsel in Edit-Modus
     editMode = true;
     editingId = id;
 
-    // Formular mit Trainingsdaten füllen
+    // Formular mit Daten füllen
     document.getElementById('exercise').value = training.exercise;
-    document.getElementById('weight').value = training.weight;
-    document.getElementById('sets').value = training.sets;
-    document.getElementById('reps').value = training.reps;
+
+    // Training Type setzen
+    currentTrainingType = training.trainingType || 'weight';
+    toggleBtns.forEach(btn => {
+        if (btn.getAttribute('data-type') === currentTrainingType) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    if (currentTrainingType === 'weight') {
+        weightGroup.style.display = 'block';
+        timeGroup.style.display = 'none';
+        document.getElementById('weight').value = training.weight || '';
+    } else {
+        weightGroup.style.display = 'none';
+        timeGroup.style.display = 'block';
+        document.getElementById('timeMinutes').value = training.timeMinutes || 0;
+        document.getElementById('timeSeconds').value = training.timeSeconds || 0;
+    }
+
+    setsInput.value = training.sets;
     document.getElementById('date').value = training.date;
+
+    // Reps Inputs generieren und füllen
+    generateRepsInputs();
+    training.reps.forEach((rep, index) => {
+        const repInput = document.getElementById(`rep${index + 1}`);
+        if (repInput) {
+            repInput.value = rep;
+        }
+    });
 
     // UI anpassen
     formTitle.textContent = 'Training bearbeiten ✏️';
@@ -111,38 +247,49 @@ function editTraining(id) {
     cancelBtn.style.display = 'block';
     inputSection.classList.add('editing');
 
-    // Zum Formular scrollen
     inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Bearbeitung abbrechen
 function cancelEdit() {
     editMode = false;
     editingId = null;
 
-    // Formular zurücksetzen
     form.reset();
     setCurrentDate();
+    generateRepsInputs();
 
-    // UI zurücksetzen
+    // Training Type zurücksetzen
+    currentTrainingType = 'weight';
+    toggleBtns.forEach(btn => {
+        if (btn.getAttribute('data-type') === 'weight') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    weightGroup.style.display = 'block';
+    timeGroup.style.display = 'none';
+
     formTitle.textContent = 'Neues Training eintragen';
     submitBtn.textContent = 'Eintrag hinzufügen';
     cancelBtn.style.display = 'none';
     inputSection.classList.remove('editing');
 }
 
-// Event Listener für Abbrechen-Button
 cancelBtn.addEventListener('click', cancelEdit);
 
-// Training löschen
+// ========================================
+// TRAINING LÖSCHEN
+// ========================================
+
 async function deleteTraining(id) {
     if (confirm('Möchtest du diesen Eintrag wirklich löschen?')) {
         trainings = trainings.filter(training => training.id !== id);
         saveTrainings();
         displayTrainings();
-        displayPersonalRecords(); // PRs aktualisieren
+        displayPersonalRecords();
+        updateStatistics();
 
-        // Aus Cloud löschen
         if (typeof deleteFromCloud === 'function') {
             await deleteFromCloud(id);
         }
@@ -151,22 +298,24 @@ async function deleteTraining(id) {
     }
 }
 
-// Alle Trainings löschen
 clearHistoryBtn.addEventListener('click', function() {
     if (confirm('Möchtest du wirklich alle Einträge löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
         trainings = [];
         saveTrainings();
         displayTrainings();
-        displayPersonalRecords(); // PRs aktualisieren
+        displayPersonalRecords();
+        updateStatistics();
         showNotification('Alle Einträge gelöscht!');
     }
 });
 
-// Trainings anzeigen
+// ========================================
+// TRAININGS ANZEIGEN
+// ========================================
+
 function displayTrainings() {
     let filteredTrainings = [...trainings];
 
-    // Filtern nach Suchbegriff
     const searchTerm = searchInput.value.toLowerCase();
     if (searchTerm) {
         filteredTrainings = filteredTrainings.filter(training =>
@@ -174,7 +323,6 @@ function displayTrainings() {
         );
     }
 
-    // Sortieren
     const sortBy = sortSelect.value;
     filteredTrainings.sort((a, b) => {
         switch(sortBy) {
@@ -208,7 +356,6 @@ function displayTrainings() {
         groupedByDate[training.date].push(training);
     });
 
-    // Sortierte Datumskeys erstellen
     const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
         if (sortBy === 'date-asc') {
             return new Date(a) - new Date(b);
@@ -216,7 +363,6 @@ function displayTrainings() {
         return new Date(b) - new Date(a);
     });
 
-    // HTML für gruppierte Trainings erstellen
     trainingList.innerHTML = sortedDates.map(date => {
         const dateObj = new Date(date);
         const formattedDate = dateObj.toLocaleDateString('de-DE', {
@@ -229,22 +375,65 @@ function displayTrainings() {
         const trainingsOfDay = groupedByDate[date];
 
         const trainingsHTML = trainingsOfDay.map(training => {
+            // Soll/Ist Vergleich mit Plan
+            const plan = trainingPlans.find(p =>
+                p.exercise.toLowerCase() === training.exercise.toLowerCase()
+            );
+
+            let planComparisonHTML = '';
+            if (plan) {
+                const actualSets = training.sets;
+                const plannedSets = plan.sets;
+                const avgReps = Math.round(training.reps.reduce((a, b) => a + b, 0) / training.reps.length);
+                const plannedReps = plan.reps;
+
+                const setsMatch = actualSets >= plannedSets;
+                const repsMatch = avgReps >= plannedReps;
+
+                planComparisonHTML = `
+                    <div class="plan-comparison">
+                        <div class="comparison-item ${setsMatch ? 'success' : 'warning'}">
+                            <span>Sätze: ${actualSets}/${plannedSets}</span>
+                            ${setsMatch ? '✅' : '⚠️'}
+                        </div>
+                        <div class="comparison-item ${repsMatch ? 'success' : 'warning'}">
+                            <span>Ø Wdh.: ${avgReps}/${plannedReps}</span>
+                            ${repsMatch ? '✅' : '⚠️'}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Reps anzeigen
+            const repsDisplay = training.reps.join(', ');
+
+            // Gewicht oder Zeit anzeigen
+            let valueDisplay = '';
+            if (training.trainingType === 'time') {
+                const mins = training.timeMinutes || 0;
+                const secs = training.timeSeconds || 0;
+                valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
+            } else {
+                valueDisplay = `${training.weight} kg`;
+            }
+
             return `
                 <div class="training-item">
                     <div class="training-info">
                         <h3>${training.exercise}</h3>
+                        ${planComparisonHTML}
                         <div class="training-details">
                             <div class="detail-item">
-                                <div class="detail-label">Gewicht</div>
-                                <div class="detail-value">${training.weight} kg</div>
+                                <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
+                                <div class="detail-value">${valueDisplay}</div>
                             </div>
                             <div class="detail-item">
                                 <div class="detail-label">Sätze</div>
                                 <div class="detail-value">${training.sets}</div>
                             </div>
                             <div class="detail-item">
-                                <div class="detail-label">Wdh.</div>
-                                <div class="detail-value">${training.reps}</div>
+                                <div class="detail-label">Wiederholungen</div>
+                                <div class="detail-value">${repsDisplay}</div>
                             </div>
                         </div>
                     </div>
@@ -271,89 +460,14 @@ function displayTrainings() {
     }).join('');
 }
 
-// Benachrichtigung anzeigen
-function showNotification(message) {
-    // Einfaches Alert für Feedback (kann später erweitert werden)
-    const notification = document.createElement('div');
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #4caf50;
-        color: white;
-        padding: 15px 25px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 1000;
-        animation: slideIn 0.3s ease-out;
-    `;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => notification.remove(), 300);
-    }, 2000);
-}
-
-// Event Listener für Filter und Sortierung
 searchInput.addEventListener('input', displayTrainings);
 sortSelect.addEventListener('change', displayTrainings);
 
-// Animation für Benachrichtigungen
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
+// ========================================
+// PERSONAL RECORDS
+// ========================================
 
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
-
-// Tab-Wechsel Funktionalität
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-
-tabButtons.forEach(button => {
-    button.addEventListener('click', function() {
-        const tabName = this.getAttribute('data-tab');
-
-        // Alle Tabs deaktivieren
-        tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabContents.forEach(content => content.classList.remove('active'));
-
-        // Aktiven Tab aktivieren
-        this.classList.add('active');
-        if (tabName === 'history') {
-            document.getElementById('historyTab').classList.add('active');
-        } else if (tabName === 'records') {
-            document.getElementById('recordsTab').classList.add('active');
-            displayPersonalRecords(); // PRs aktualisieren beim Tab-Wechsel
-        }
-    });
-});
-
-// Personal Records berechnen und anzeigen
 function displayPersonalRecords() {
-    // Die Big 3 Übungen mit verschiedenen Schreibweisen
     const exercises = {
         'Kniebeugen Front': {
             names: ['kniebeugen front', 'front kniebeugen', 'frontkniebeugen', 'front squat', 'front squats'],
@@ -374,18 +488,16 @@ function displayPersonalRecords() {
 
     const records = {};
 
-    // Für jede Übung die Bestleistung finden
     Object.keys(exercises).forEach(exerciseName => {
         const exerciseData = exercises[exerciseName];
 
-        // Alle Trainings für diese Übung finden
         const exerciseTrainings = trainings.filter(training => {
             const trainingName = training.exercise.toLowerCase().trim();
-            return exerciseData.names.some(name => trainingName.includes(name));
+            return training.trainingType === 'weight' &&
+                   exerciseData.names.some(name => trainingName.includes(name));
         });
 
         if (exerciseTrainings.length > 0) {
-            // Bestleistung (höchstes Gewicht) finden
             const bestTraining = exerciseTrainings.reduce((max, training) => {
                 return training.weight > max.weight ? training : max;
             });
@@ -399,7 +511,6 @@ function displayPersonalRecords() {
         }
     });
 
-    // Records anzeigen
     if (Object.keys(records).length === 0) {
         recordsList.innerHTML = `
             <div class="no-records">
@@ -438,6 +549,8 @@ function displayPersonalRecords() {
             year: 'numeric'
         });
 
+        const repsDisplay = record.reps.join(' × ');
+
         return `
             <div class="record-card ${record.color}">
                 <div class="record-exercise">
@@ -455,7 +568,7 @@ function displayPersonalRecords() {
                     <div class="record-stat">
                         <div class="record-stat-label">Bei Wiederholungen</div>
                         <div class="record-stat-value">
-                            ${record.sets} × ${record.reps}
+                            ${repsDisplay}
                         </div>
                     </div>
                 </div>
@@ -469,7 +582,495 @@ function displayPersonalRecords() {
     }).join('');
 }
 
-// Email Login Handler
+// ========================================
+// TRAININGSPLAN
+// ========================================
+
+planForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const plan = {
+        id: Date.now(),
+        exercise: document.getElementById('planExercise').value,
+        sets: parseInt(document.getElementById('planSets').value),
+        reps: parseInt(document.getElementById('planReps').value)
+    };
+
+    trainingPlans.push(plan);
+    localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+
+    // Zu Cloud synchronisieren
+    if (typeof syncPlanToCloud === 'function') {
+        await syncPlanToCloud(plan);
+    }
+
+    displayTrainingPlans();
+    planForm.reset();
+    showNotification('Plan hinzugefügt!');
+});
+
+function displayTrainingPlans() {
+    if (trainingPlans.length === 0) {
+        planList.innerHTML = `
+            <div class="empty-state">
+                <p>Noch keine Trainingspläne erstellt.</p>
+                <p>Füge deinen ersten Plan hinzu! 📋</p>
+            </div>
+        `;
+        return;
+    }
+
+    planList.innerHTML = trainingPlans.map(plan => `
+        <div class="plan-item">
+            <div class="plan-info">
+                <h3>${plan.exercise}</h3>
+                <div class="plan-details">
+                    <span><strong>Soll Sätze:</strong> ${plan.sets}</span>
+                    <span><strong>Soll Wiederholungen:</strong> ${plan.reps}</span>
+                </div>
+            </div>
+            <div class="plan-actions">
+                <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function deletePlan(id) {
+    if (confirm('Plan löschen?')) {
+        trainingPlans = trainingPlans.filter(p => p.id !== id);
+        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+
+        // Aus Cloud löschen
+        if (typeof deletePlanFromCloud === 'function') {
+            await deletePlanFromCloud(id);
+        }
+
+        displayTrainingPlans();
+        showNotification('Plan gelöscht!');
+    }
+}
+
+// ========================================
+// EINSTELLUNGEN - KÖRPERGEWICHT
+// ========================================
+
+bodyDataForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const bodyWeight = {
+        id: Date.now(),
+        weight: parseFloat(document.getElementById('bodyWeight').value),
+        date: document.getElementById('bodyWeightDate').value
+    };
+
+    bodyWeights.push(bodyWeight);
+    bodyWeights.sort((a, b) => new Date(b.date) - new Date(a.date));
+    localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
+
+    // Zu Cloud synchronisieren
+    if (typeof syncBodyWeightToCloud === 'function') {
+        await syncBodyWeightToCloud(bodyWeight);
+    }
+
+    displayBodyWeightHistory();
+    updateBodyWeightChart();
+    bodyDataForm.reset();
+    setCurrentDate();
+    showNotification('Körpergewicht gespeichert!');
+});
+
+function displayBodyWeightHistory() {
+    if (bodyWeights.length === 0) {
+        bodyWeightHistory.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Einträge</p>';
+        return;
+    }
+
+    bodyWeightHistory.innerHTML = bodyWeights.map(entry => {
+        const date = new Date(entry.date);
+        const formattedDate = date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        return `
+            <div class="body-weight-entry">
+                <span class="date">${formattedDate}</span>
+                <span class="weight">${entry.weight} kg</span>
+                <button class="delete-btn" onclick="deleteBodyWeight(${entry.id})">×</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function deleteBodyWeight(id) {
+    bodyWeights = bodyWeights.filter(w => w.id !== id);
+    localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
+
+    // Aus Cloud löschen
+    if (typeof deleteBodyWeightFromCloud === 'function') {
+        await deleteBodyWeightFromCloud(id);
+    }
+
+    displayBodyWeightHistory();
+    updateBodyWeightChart();
+    showNotification('Eintrag gelöscht!');
+}
+
+// ========================================
+// EINSTELLUNGEN - PERSÖNLICHE INFO
+// ========================================
+
+personalInfoForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    personalInfo.age = parseInt(document.getElementById('age').value) || null;
+    personalInfo.height = parseInt(document.getElementById('height').value) || null;
+
+    localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+
+    // Zu Cloud synchronisieren
+    if (typeof syncPersonalInfoToCloud === 'function') {
+        await syncPersonalInfoToCloud(personalInfo);
+    }
+
+    showNotification('Persönliche Informationen gespeichert!');
+});
+
+function loadPersonalInfo() {
+    if (personalInfo.age) {
+        document.getElementById('age').value = personalInfo.age;
+    }
+    if (personalInfo.height) {
+        document.getElementById('height').value = personalInfo.height;
+    }
+}
+
+// ========================================
+// STATISTIKEN
+// ========================================
+
+function updateStatistics() {
+    // Trainings diesen Monat
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const monthlyCount = trainings.filter(t => {
+        const date = new Date(t.date);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    }).length;
+
+    document.getElementById('monthlyTrainings').textContent = monthlyCount;
+
+    // Durchschnitt pro Monat
+    if (trainings.length > 0) {
+        const dates = trainings.map(t => new Date(t.date));
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+
+        const monthsDiff = (maxDate.getFullYear() - minDate.getFullYear()) * 12 +
+                          (maxDate.getMonth() - minDate.getMonth()) + 1;
+
+        const avgMonthly = Math.round(trainings.length / monthsDiff);
+        document.getElementById('avgMonthlyTrainings').textContent = avgMonthly;
+    } else {
+        document.getElementById('avgMonthlyTrainings').textContent = 0;
+    }
+
+    // Gesamt Trainings
+    document.getElementById('totalTrainings').textContent = trainings.length;
+}
+
+// ========================================
+// CHARTS
+// ========================================
+
+let bodyWeightChart = null;
+let personalRecordsChart = null;
+
+function updateBodyWeightChart() {
+    const canvas = document.getElementById('bodyWeightChart');
+    if (!canvas) return;
+
+    if (bodyWeights.length === 0) {
+        canvas.parentElement.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Noch keine Körpergewicht-Daten vorhanden</p>';
+        return;
+    }
+
+    // Daten sortieren nach Datum
+    const sortedWeights = [...bodyWeights].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const labels = sortedWeights.map(w => {
+        const date = new Date(w.date);
+        return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' });
+    });
+
+    const data = sortedWeights.map(w => w.weight);
+
+    if (bodyWeightChart) {
+        bodyWeightChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    bodyWeightChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Körpergewicht (kg)',
+                data: data,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+function updatePersonalRecordsChart() {
+    const canvas = document.getElementById('personalRecordsChart');
+    if (!canvas) return;
+
+    // Big 3 Übungen filtern
+    const exercises = {
+        'Kniebeugen Front': ['kniebeugen front', 'front kniebeugen', 'frontkniebeugen', 'front squat'],
+        'Bankdrücken': ['bankdrücken', 'bench press', 'benchpress'],
+        'Kreuzheben': ['kreuzheben', 'deadlift']
+    };
+
+    const datasets = [];
+
+    Object.keys(exercises).forEach((exerciseName, index) => {
+        const names = exercises[exerciseName];
+        const exerciseTrainings = trainings.filter(t => {
+            const tName = t.exercise.toLowerCase().trim();
+            return t.trainingType === 'weight' && names.some(name => tName.includes(name));
+        });
+
+        if (exerciseTrainings.length > 0) {
+            // Nach Datum sortieren
+            const sorted = exerciseTrainings.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Max Gewicht pro Training tracken
+            const dataPoints = sorted.map(t => ({
+                x: t.date,
+                y: t.weight
+            }));
+
+            const colors = ['#ffd700', '#c0c0c0', '#cd7f32'];
+
+            datasets.push({
+                label: exerciseName,
+                data: dataPoints,
+                borderColor: colors[index],
+                backgroundColor: colors[index] + '40',
+                tension: 0.4
+            });
+        }
+    });
+
+    if (datasets.length === 0) {
+        canvas.parentElement.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Noch keine PR-Daten für die Big 3 vorhanden</p>';
+        return;
+    }
+
+    if (personalRecordsChart) {
+        personalRecordsChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    personalRecordsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: {
+                            day: 'dd.MM'
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: false,
+                    title: {
+                        display: true,
+                        text: 'Gewicht (kg)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ========================================
+// TAB NAVIGATION
+// ========================================
+
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+        const tabName = this.getAttribute('data-tab');
+
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+
+        this.classList.add('active');
+
+        const tabMap = {
+            'history': 'historyTab',
+            'plan': 'planTab',
+            'records': 'recordsTab',
+            'stats': 'statsTab',
+            'settings': 'settingsTab'
+        };
+
+        const targetTab = document.getElementById(tabMap[tabName]);
+        if (targetTab) {
+            targetTab.classList.add('active');
+        }
+
+        // Charts aktualisieren wenn Stats Tab geöffnet wird
+        if (tabName === 'stats') {
+            updateStatistics();
+            updateBodyWeightChart();
+            updatePersonalRecordsChart();
+        }
+
+        // Personal Records aktualisieren
+        if (tabName === 'records') {
+            displayPersonalRecords();
+        }
+
+        // Training Plans anzeigen
+        if (tabName === 'plan') {
+            displayTrainingPlans();
+        }
+
+        // Settings laden
+        if (tabName === 'settings') {
+            displayBodyWeightHistory();
+            loadPersonalInfo();
+        }
+    });
+});
+
+// ========================================
+// BENACHRICHTIGUNGEN
+// ========================================
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #4caf50;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
+}
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+
+    .plan-comparison {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+        padding: 8px;
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 5px;
+    }
+
+    .comparison-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.85rem;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .comparison-item.success {
+        background: rgba(76, 175, 80, 0.1);
+        color: #4caf50;
+    }
+
+    .comparison-item.warning {
+        background: rgba(255, 152, 0, 0.1);
+        color: #ff9800;
+    }
+`;
+document.head.appendChild(style);
+
+// ========================================
+// LOGIN HANDLERS (für sync.js)
+// ========================================
+
 function handleEmailLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -477,7 +1078,6 @@ function handleEmailLogin() {
     hideLoginModal();
 }
 
-// Email Registrierung Handler
 function handleEmailRegister() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
@@ -489,18 +1089,27 @@ function handleEmailRegister() {
     hideLoginModal();
 }
 
-// Export für globale Verwendung
 window.handleEmailLogin = handleEmailLogin;
 window.handleEmailRegister = handleEmailRegister;
 
-// Initialisierung
+// ========================================
+// APP INITIALISIERUNG
+// ========================================
+
 async function initApp() {
     setCurrentDate();
+    generateRepsInputs();
     displayTrainings();
     displayPersonalRecords();
+    displayTrainingPlans();
+    displayBodyWeightHistory();
+    loadPersonalInfo();
+    updateStatistics();
 
     // Sync initialisieren
-    await initSync();
+    if (typeof initSync === 'function') {
+        await initSync();
+    }
 }
 
 // App starten
