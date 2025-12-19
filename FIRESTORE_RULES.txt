@@ -1,0 +1,34 @@
+// FIRESTORE SICHERHEITSREGELN
+// Kopiere diese Regeln in die Firebase Console
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Nur angemeldete Benutzer können ihre eigenen Daten lesen/schreiben
+    match /users/{userId} {
+      // User kann nur eigene Daten sehen und ändern
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Trainings eines Users
+      match /trainings/{trainingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Trainingspläne eines Users
+      match /plans/{planId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Körpergewicht eines Users
+      match /bodyWeights/{weightId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
+
+// WICHTIG:
+// - NUR angemeldete User können Daten lesen/schreiben
+// - Jeder User sieht NUR seine eigenen Daten
+// - Ohne Anmeldung sind KEINE Daten sichtbar
