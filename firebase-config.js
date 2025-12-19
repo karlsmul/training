@@ -9,14 +9,15 @@
 // 5. Gehe zu Projekteinstellungen → Füge eine Web-App hinzu
 // 6. Kopiere die Firebase-Config hierher
 
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  // Ersetze diese Platzhalter mit deinen echten Firebase-Credentials:
-  apiKey: "DEIN_API_KEY",
-  authDomain: "DEIN_PROJECT_ID.firebaseapp.com",
-  projectId: "DEIN_PROJECT_ID",
-  storageBucket: "DEIN_PROJECT_ID.appspot.com",
-  messagingSenderId: "DEINE_SENDER_ID",
-  appId: "DEINE_APP_ID"
+  apiKey: "AIzaSyBRg6cSo-1R4YJY3ElgxSe1dyKSSIlCygc",
+  authDomain: "krafttraining-app.firebaseapp.com",
+  projectId: "krafttraining-app",
+  storageBucket: "krafttraining-app.firebasestorage.app",
+  messagingSenderId: "671708020612",
+  appId: "1:671708020612:web:b77c08b0b4d12a390b67d1",
+  measurementId: "G-7J32088TKB"
 };
 
 // Firebase initialisieren
