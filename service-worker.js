@@ -1,4 +1,4 @@
-const CACHE_NAME = 'krafttraining-v1';
+const CACHE_NAME = 'krafttraining-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -40,6 +40,20 @@ self.addEventListener('activate', event => {
 
 // Fetch - Versuche zuerst Cache, dann Netzwerk
 self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
+
+  // NIE Firebase/Firestore URLs cachen!
+  if (url.hostname.includes('firebaseio.com') ||
+      url.hostname.includes('firestore.googleapis.com') ||
+      url.hostname.includes('googleapis.com') ||
+      url.hostname.includes('google.com') ||
+      url.hostname.includes('gstatic.com')) {
+    // Firebase-Anfragen direkt durchlassen, NICHT cachen
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Nur lokale App-Dateien cachen
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -57,24 +71,30 @@ self.addEventListener('fetch', event => {
             return response;
           }
 
-          // Clone die Response - eine Response ist ein Stream und kann nur einmal verwendet werden
-          const responseToCache = response.clone();
+          // Nur lokale Dateien cachen (gleiche Domain)
+          if (url.origin === location.origin) {
+            // Clone die Response - eine Response ist ein Stream und kann nur einmal verwendet werden
+            const responseToCache = response.clone();
 
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              cache.put(event.request, responseToCache);
-            });
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+          }
 
           return response;
         }).catch(() => {
-          // Netzwerkfehler - zeige Offline-Nachricht
-          return new Response('Offline - Bitte überprüfe deine Internetverbindung', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({
-              'Content-Type': 'text/plain'
-            })
-          });
+          // Netzwerkfehler - zeige Offline-Nachricht nur für lokale Anfragen
+          if (url.origin === location.origin) {
+            return new Response('Offline - Bitte überprüfe deine Internetverbindung', {
+              status: 503,
+              statusText: 'Service Unavailable',
+              headers: new Headers({
+                'Content-Type': 'text/plain'
+              })
+            });
+          }
+          throw new Error('Network error');
         });
       })
   );
