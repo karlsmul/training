@@ -95,6 +95,7 @@ async function syncToCloud(training) {
         timeSeconds: training.timeSeconds,
         sets: training.sets,
         reps: training.reps,
+        borgValue: training.borgValue || 5,
         date: training.date,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });

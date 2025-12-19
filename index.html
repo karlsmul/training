@@ -47,7 +47,10 @@
                 <form id="trainingForm">
                     <div class="form-group">
                         <label for="exercise">Übung:</label>
-                        <input type="text" id="exercise" required placeholder="z.B. Bankdrücken">
+                        <select id="exercise" required>
+                            <option value="">-- Übung auswählen --</option>
+                            <!-- Wird dynamisch gefüllt -->
+                        </select>
                     </div>
 
                     <!-- Toggle zwischen Gewicht und Zeit -->
@@ -84,6 +87,22 @@
                         <label>Wiederholungen pro Satz:</label>
                         <div id="repsInputs" class="reps-inputs">
                             <!-- Dynamisch generiert -->
+                        </div>
+                    </div>
+
+                    <!-- Borg-Wert (Trainingsqualität) -->
+                    <div class="form-group">
+                        <label for="borgValue">Wie war das Training? (1 = sehr schlecht, 10 = sehr gut):</label>
+                        <div class="borg-scale">
+                            <input type="range" id="borgValue" min="1" max="10" value="5" required>
+                            <div class="borg-value-display">
+                                <span id="borgValueDisplay">5</span>/10
+                            </div>
+                        </div>
+                        <div class="borg-labels">
+                            <span>Sehr schlecht</span>
+                            <span>Mittel</span>
+                            <span>Sehr gut</span>
                         </div>
                     </div>
 
@@ -221,6 +240,30 @@
                 <div id="settingsTab" class="tab-content">
                     <div class="settings-header">
                         <h2>Einstellungen</h2>
+                    </div>
+
+                    <!-- Übungsverwaltung -->
+                    <div class="settings-section">
+                        <h3>Übungsverwaltung</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                            Verwalte deine Übungsliste für das Dropdown-Menü
+                        </p>
+
+                        <form id="exerciseForm">
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="newExercise">Neue Übung:</label>
+                                    <input type="text" id="newExercise" placeholder="z.B. Bankdrücken">
+                                </div>
+                                <div style="display: flex; align-items: flex-end;">
+                                    <button type="submit" class="btn-primary">Hinzufügen</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div id="exerciseList" class="exercise-list">
+                            <!-- Übungsliste wird hier angezeigt -->
+                        </div>
                     </div>
 
                     <!-- Körperdaten -->

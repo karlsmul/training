@@ -924,6 +924,89 @@ select:focus {
     margin-bottom: 15px;
 }
 
+/* Borg Scale */
+.borg-scale {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.borg-scale input[type="range"] {
+    flex: 1;
+    height: 8px;
+    border-radius: 5px;
+    background: linear-gradient(to right, #ff6b6b 0%, #ffd93d 50%, #6bcf7f 100%);
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.borg-scale input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #667eea;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.borg-scale input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #667eea;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.borg-value-display {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+    min-width: 60px;
+    text-align: center;
+}
+
+.borg-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Exercise List */
+.exercise-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 15px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.exercise-item {
+    background: white;
+    padding: 12px 15px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.exercise-item .name {
+    font-weight: 500;
+    color: #333;
+}
+
+.exercise-item .delete-btn {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+}
+
 .body-weight-history {
     margin-top: 20px;
     max-height: 300px;

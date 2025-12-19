@@ -58,6 +58,17 @@ let trainings = migrateOldData();
 let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
 let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
+let exercises = JSON.parse(localStorage.getItem('exercises')) || [
+    'Bankdrücken',
+    'Kniebeugen Front',
+    'Kreuzheben',
+    'Schulterdrücken',
+    'Klimmzüge',
+    'Dips',
+    'Rudern',
+    'Bizeps Curls',
+    'Trizeps Extensions'
+];
 
 // Edit-Modus Tracking
 let editMode = false;
@@ -96,10 +107,24 @@ const planList = document.getElementById('planList');
 const bodyDataForm = document.getElementById('bodyDataForm');
 const bodyWeightHistory = document.getElementById('bodyWeightHistory');
 const personalInfoForm = document.getElementById('personalInfoForm');
+const exerciseForm = document.getElementById('exerciseForm');
+const exerciseList = document.getElementById('exerciseList');
+const exerciseSelect = document.getElementById('exercise');
+
+// Borg value elements
+const borgValueInput = document.getElementById('borgValue');
+const borgValueDisplay = document.getElementById('borgValueDisplay');
 
 // ========================================
 // INITIALISIERUNG
 // ========================================
+
+// Borg-Slider Funktionalität
+if (borgValueInput && borgValueDisplay) {
+    borgValueInput.addEventListener('input', function() {
+        borgValueDisplay.textContent = this.value;
+    });
+}
 
 function setCurrentDate() {
     const today = new Date();
@@ -170,6 +195,29 @@ function generateRepsInputs() {
 generateRepsInputs();
 
 // ========================================
+// ÜBUNGSVERWALTUNG
+// ========================================
+
+function populateExerciseDropdown() {
+    if (!exerciseSelect) return;
+
+    const currentValue = exerciseSelect.value;
+    exerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
+
+    exercises.forEach(exercise => {
+        const option = document.createElement('option');
+        option.value = exercise;
+        option.textContent = exercise;
+        exerciseSelect.appendChild(option);
+    });
+
+    // Restore selected value if it exists
+    if (currentValue && exercises.includes(currentValue)) {
+        exerciseSelect.value = currentValue;
+    }
+}
+
+// ========================================
 // TRAINING HINZUFÜGEN/BEARBEITEN
 // ========================================
 
@@ -200,6 +248,7 @@ form.addEventListener('submit', async function(e) {
                 timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
                 sets: numSets,
                 reps: reps,
+                borgValue: parseInt(document.getElementById('borgValue').value),
                 date: document.getElementById('date').value
             };
             trainings[trainingIndex] = training;
@@ -221,6 +270,7 @@ form.addEventListener('submit', async function(e) {
             timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
             sets: numSets,
             reps: reps,
+            borgValue: parseInt(document.getElementById('borgValue').value),
             date: document.getElementById('date').value
         };
         trainings.push(training);
@@ -282,6 +332,14 @@ function editTraining(id) {
 
     setsInput.value = training.sets;
     document.getElementById('date').value = training.date;
+
+    // Borg Value setzen
+    if (training.borgValue) {
+        document.getElementById('borgValue').value = training.borgValue;
+        if (borgValueDisplay) {
+            borgValueDisplay.textContent = training.borgValue;
+        }
+    }
 
     // Reps Inputs generieren und füllen
     generateRepsInputs();
@@ -491,6 +549,15 @@ function displayTrainings() {
                 valueDisplay = `${training.weight} kg`;
             }
 
+            // Borg-Wert Anzeige
+            const borgColor = training.borgValue >= 7 ? '#6bcf7f' : training.borgValue >= 4 ? '#ffd93d' : '#ff6b6b';
+            const borgDisplay = training.borgValue ? `
+                <div class="detail-item">
+                    <div class="detail-label">Qualität</div>
+                    <div class="detail-value" style="color: ${borgColor}">${training.borgValue}/10</div>
+                </div>
+            ` : '';
+
             return `
                 <div class="training-item">
                     <div class="training-info">
@@ -509,6 +576,7 @@ function displayTrainings() {
                                 <div class="detail-label">Wiederholungen</div>
                                 <div class="detail-value">${repsDisplay}</div>
                             </div>
+                            ${borgDisplay}
                         </div>
                     </div>
                     <div class="training-actions">
@@ -799,6 +867,56 @@ async function deleteBodyWeight(id) {
 }
 
 // ========================================
+// ÜBUNGSLISTE VERWALTEN
+// ========================================
+
+exerciseForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const newExercise = document.getElementById('newExercise').value.trim();
+
+    if (!newExercise) return;
+
+    if (exercises.includes(newExercise)) {
+        showNotification('Diese Übung existiert bereits!');
+        return;
+    }
+
+    exercises.push(newExercise);
+    exercises.sort();
+    localStorage.setItem('exercises', JSON.stringify(exercises));
+
+    populateExerciseDropdown();
+    displayExerciseList();
+    exerciseForm.reset();
+    showNotification('Übung hinzugefügt!');
+});
+
+function displayExerciseList() {
+    if (exercises.length === 0) {
+        exerciseList.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Übungen</p>';
+        return;
+    }
+
+    exerciseList.innerHTML = exercises.map(exercise => `
+        <div class="exercise-item">
+            <span class="name">${exercise}</span>
+            <button class="delete-btn" onclick="deleteExercise('${exercise.replace(/'/g, "\\'")}')">Löschen</button>
+        </div>
+    `).join('');
+}
+
+function deleteExercise(exerciseName) {
+    if (confirm(`Übung "${exerciseName}" wirklich löschen?`)) {
+        exercises = exercises.filter(e => e !== exerciseName);
+        localStorage.setItem('exercises', JSON.stringify(exercises));
+        populateExerciseDropdown();
+        displayExerciseList();
+        showNotification('Übung gelöscht!');
+    }
+}
+
+// ========================================
 // EINSTELLUNGEN - PERSÖNLICHE INFO
 // ========================================
 
@@ -1060,6 +1178,7 @@ tabButtons.forEach(button => {
         // Settings laden
         if (tabName === 'settings') {
             displayBodyWeightHistory();
+            displayExerciseList();
             loadPersonalInfo();
         }
     });
@@ -1179,10 +1298,12 @@ window.handleEmailRegister = handleEmailRegister;
 async function initApp() {
     setCurrentDate();
     generateRepsInputs();
+    populateExerciseDropdown();
     displayTrainings();
     displayPersonalRecords();
     displayTrainingPlans();
     displayBodyWeightHistory();
+    displayExerciseList();
     loadPersonalInfo();
     updateStatistics();
 
