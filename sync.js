@@ -95,7 +95,6 @@ async function syncToCloud(training) {
         timeSeconds: training.timeSeconds,
         sets: training.sets,
         reps: training.reps,
-        borgValue: training.borgValue || 5,
         date: training.date,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -170,6 +169,28 @@ async function syncPersonalInfoToCloud(info) {
   }
 }
 
+// Daily Borg-Wert zu Cloud synchronisieren
+async function syncDailyBorgToCloud(borgEntry) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    const docId = borgEntry.date.replace(/-/g, ''); // Datum als ID (z.B. "20241219")
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('dailyBorgValues')
+      .doc(docId)
+      .set({
+        date: borgEntry.date,
+        borgValue: borgEntry.borgValue,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+    console.log('Daily Borg-Wert zu Cloud synchronisiert:', borgEntry.date);
+  } catch (error) {
+    console.error('Daily Borg Upload-Fehler:', error);
+  }
+}
+
 // Training aus Cloud löschen
 async function deleteFromCloud(id) {
   if (!syncEnabled || !currentUser) return;
@@ -218,6 +239,24 @@ async function deleteBodyWeightFromCloud(id) {
     console.log('Körpergewicht aus Cloud gelöscht:', id);
   } catch (error) {
     console.error('Body Weight Lösch-Fehler:', error);
+  }
+}
+
+// Daily Borg-Wert aus Cloud löschen
+async function deleteDailyBorgFromCloud(date) {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    const docId = date.replace(/-/g, '');
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('dailyBorgValues')
+      .doc(docId)
+      .delete();
+
+    console.log('Daily Borg-Wert aus Cloud gelöscht:', date);
+  } catch (error) {
+    console.error('Daily Borg Lösch-Fehler:', error);
   }
 }
 
@@ -466,9 +505,11 @@ window.syncToCloud = syncToCloud;
 window.syncPlanToCloud = syncPlanToCloud;
 window.syncBodyWeightToCloud = syncBodyWeightToCloud;
 window.syncPersonalInfoToCloud = syncPersonalInfoToCloud;
+window.syncDailyBorgToCloud = syncDailyBorgToCloud;
 window.deleteFromCloud = deleteFromCloud;
 window.deletePlanFromCloud = deletePlanFromCloud;
 window.deleteBodyWeightFromCloud = deleteBodyWeightFromCloud;
+window.deleteDailyBorgFromCloud = deleteDailyBorgFromCloud;
 window.loginWithGoogle = loginWithGoogle;
 window.loginWithEmail = loginWithEmail;
 window.registerWithEmail = registerWithEmail;

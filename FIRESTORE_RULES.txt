@@ -24,6 +24,11 @@ service cloud.firestore {
       match /bodyWeights/{weightId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      // Daily Borg-Werte eines Users
+      match /dailyBorgValues/{borgId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
   }
 }

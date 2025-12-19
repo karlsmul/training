@@ -57,6 +57,7 @@ function migrateOldData() {
 let trainings = migrateOldData();
 let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
 let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
+let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
 let exercises = JSON.parse(localStorage.getItem('exercises')) || [
     'Bankdrücken',
@@ -111,20 +112,9 @@ const exerciseForm = document.getElementById('exerciseForm');
 const exerciseList = document.getElementById('exerciseList');
 const exerciseSelect = document.getElementById('exercise');
 
-// Borg value elements
-const borgValueInput = document.getElementById('borgValue');
-const borgValueDisplay = document.getElementById('borgValueDisplay');
-
 // ========================================
 // INITIALISIERUNG
 // ========================================
-
-// Borg-Slider Funktionalität
-if (borgValueInput && borgValueDisplay) {
-    borgValueInput.addEventListener('input', function() {
-        borgValueDisplay.textContent = this.value;
-    });
-}
 
 function setCurrentDate() {
     const today = new Date();
@@ -248,7 +238,6 @@ form.addEventListener('submit', async function(e) {
                 timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
                 sets: numSets,
                 reps: reps,
-                borgValue: parseInt(document.getElementById('borgValue').value),
                 date: document.getElementById('date').value
             };
             trainings[trainingIndex] = training;
@@ -270,7 +259,6 @@ form.addEventListener('submit', async function(e) {
             timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
             sets: numSets,
             reps: reps,
-            borgValue: parseInt(document.getElementById('borgValue').value),
             date: document.getElementById('date').value
         };
         trainings.push(training);
@@ -332,14 +320,6 @@ function editTraining(id) {
 
     setsInput.value = training.sets;
     document.getElementById('date').value = training.date;
-
-    // Borg Value setzen
-    if (training.borgValue) {
-        document.getElementById('borgValue').value = training.borgValue;
-        if (borgValueDisplay) {
-            borgValueDisplay.textContent = training.borgValue;
-        }
-    }
 
     // Reps Inputs generieren und füllen
     generateRepsInputs();
@@ -483,6 +463,11 @@ function displayTrainings() {
 
         const trainingsOfDay = groupedByDate[date];
 
+        // Borg-Wert für diesen Tag laden
+        const dailyBorg = dailyBorgValues.find(b => b.date === date);
+        const borgValue = dailyBorg ? dailyBorg.borgValue : null;
+        const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
+
         const trainingsHTML = trainingsOfDay.map(training => {
             // Soll/Ist Vergleich mit Plan
             const plan = trainingPlans.find(p =>
@@ -549,15 +534,6 @@ function displayTrainings() {
                 valueDisplay = `${training.weight} kg`;
             }
 
-            // Borg-Wert Anzeige
-            const borgColor = training.borgValue >= 7 ? '#6bcf7f' : training.borgValue >= 4 ? '#ffd93d' : '#ff6b6b';
-            const borgDisplay = training.borgValue ? `
-                <div class="detail-item">
-                    <div class="detail-label">Qualität</div>
-                    <div class="detail-value" style="color: ${borgColor}">${training.borgValue}/10</div>
-                </div>
-            ` : '';
-
             return `
                 <div class="training-item">
                     <div class="training-info">
@@ -576,7 +552,6 @@ function displayTrainings() {
                                 <div class="detail-label">Wiederholungen</div>
                                 <div class="detail-value">${repsDisplay}</div>
                             </div>
-                            ${borgDisplay}
                         </div>
                     </div>
                     <div class="training-actions">
@@ -594,6 +569,18 @@ function displayTrainings() {
                     <h3 class="date-title">${formattedDate}</h3>
                     <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
                 </div>
+                <div class="borg-day-container">
+                    <label>Wie war das Training heute?</label>
+                    <div class="borg-day-input">
+                        <input type="range" min="1" max="10" value="${borgValue || 5}"
+                               onchange="saveDailyBorg('${date}', this.value)"
+                               oninput="updateBorgDisplay('${date}', this.value)"
+                               class="borg-slider">
+                        <span class="borg-display" id="borg-${date}" style="color: ${borgColor}">
+                            ${borgValue ? borgValue + '/10' : '?/10'}
+                        </span>
+                    </div>
+                </div>
                 <div class="date-trainings">
                     ${trainingsHTML}
                 </div>
@@ -604,6 +591,49 @@ function displayTrainings() {
 
 searchInput.addEventListener('input', displayTrainings);
 sortSelect.addEventListener('change', displayTrainings);
+
+// ========================================
+// BORG-WERT FUNKTIONEN
+// ========================================
+
+function saveDailyBorg(date, value) {
+    const borgValue = parseInt(value);
+    const existingIndex = dailyBorgValues.findIndex(b => b.date === date);
+
+    if (existingIndex !== -1) {
+        dailyBorgValues[existingIndex].borgValue = borgValue;
+    } else {
+        dailyBorgValues.push({
+            id: Date.now(),
+            date: date,
+            borgValue: borgValue
+        });
+    }
+
+    localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
+
+    // Cloud sync wenn verfügbar
+    if (typeof syncDailyBorgToCloud === 'function') {
+        syncDailyBorgToCloud({ date, borgValue });
+    }
+
+    // Charts aktualisieren
+    updateBorgValueChart();
+}
+
+function updateBorgDisplay(date, value) {
+    const display = document.getElementById(`borg-${date}`);
+    if (display) {
+        const borgValue = parseInt(value);
+        const color = borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b';
+        display.style.color = color;
+        display.textContent = `${borgValue}/10`;
+    }
+}
+
+// Globale Funktionen für onclick-Handler
+window.saveDailyBorg = saveDailyBorg;
+window.updateBorgDisplay = updateBorgDisplay;
 
 // ========================================
 // PERSONAL RECORDS
@@ -987,6 +1017,7 @@ function updateStatistics() {
 
 let bodyWeightChart = null;
 let personalRecordsChart = null;
+let borgValueChart = null;
 
 function updateBodyWeightChart() {
     const canvas = document.getElementById('bodyWeightChart');
@@ -1129,6 +1160,100 @@ function updatePersonalRecordsChart() {
     });
 }
 
+function updateBorgValueChart() {
+    const canvas = document.getElementById('borgValueChart');
+    if (!canvas) return;
+
+    if (dailyBorgValues.length === 0) {
+        canvas.parentElement.innerHTML = '<p style="text-align: center; color: #999; padding: 40px;">Noch keine Borg-Werte vorhanden</p>';
+        return;
+    }
+
+    // Berechne monatliche Durchschnitte
+    const monthlyData = {};
+
+    dailyBorgValues.forEach(entry => {
+        const date = new Date(entry.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+        if (!monthlyData[monthKey]) {
+            monthlyData[monthKey] = { sum: 0, count: 0 };
+        }
+
+        monthlyData[monthKey].sum += entry.borgValue;
+        monthlyData[monthKey].count += 1;
+    });
+
+    // Sortiere nach Monat und berechne Durchschnitte
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const labels = sortedMonths.map(monthKey => {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(year, parseInt(month) - 1);
+        return date.toLocaleDateString('de-DE', { month: 'short', year: 'numeric' });
+    });
+
+    const averages = sortedMonths.map(monthKey => {
+        const data = monthlyData[monthKey];
+        return (data.sum / data.count).toFixed(1);
+    });
+
+    if (borgValueChart) {
+        borgValueChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    borgValueChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Borg-Wert (Monatsdurchschnitt)',
+                data: averages,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true,
+                borderWidth: 3,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Durchschnitt: ${context.parsed.y}/10`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 0,
+                    max: 10,
+                    ticks: {
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Borg-Wert (1-10)'
+                    }
+                }
+            }
+        }
+    });
+}
+
 // ========================================
 // TAB NAVIGATION
 // ========================================
@@ -1163,6 +1288,7 @@ tabButtons.forEach(button => {
             updateStatistics();
             updateBodyWeightChart();
             updatePersonalRecordsChart();
+            updateBorgValueChart();
         }
 
         // Personal Records aktualisieren

@@ -90,22 +90,6 @@
                         </div>
                     </div>
 
-                    <!-- Borg-Wert (Trainingsqualität) -->
-                    <div class="form-group">
-                        <label for="borgValue">Wie war das Training? (1 = sehr schlecht, 10 = sehr gut):</label>
-                        <div class="borg-scale">
-                            <input type="range" id="borgValue" min="1" max="10" value="5" required>
-                            <div class="borg-value-display">
-                                <span id="borgValueDisplay">5</span>/10
-                            </div>
-                        </div>
-                        <div class="borg-labels">
-                            <span>Sehr schlecht</span>
-                            <span>Mittel</span>
-                            <span>Sehr gut</span>
-                        </div>
-                    </div>
-
                     <div class="form-group">
                         <label for="date">Datum:</label>
                         <input type="date" id="date" required>
@@ -202,6 +186,12 @@
                 <div id="statsTab" class="tab-content">
                     <div class="stats-header">
                         <h2>Auswertung & Statistiken</h2>
+                    </div>
+
+                    <!-- Borg-Wert Chart -->
+                    <div class="chart-container">
+                        <h3>Trainingsqualität (Borg-Wert Monatsdurchschnitt)</h3>
+                        <canvas id="borgValueChart"></canvas>
                     </div>
 
                     <!-- Körpergewicht Chart -->
