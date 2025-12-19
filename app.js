@@ -2,8 +2,59 @@
 // DATA MANAGEMENT
 // ========================================
 
-// Trainingseinträge aus localStorage laden
-let trainings = JSON.parse(localStorage.getItem('trainings')) || [];
+// ========================================
+// DATEN MIGRATION (für Backwards Compatibility)
+// ========================================
+
+function migrateOldData() {
+    // Trainings migrieren
+    let trainings = JSON.parse(localStorage.getItem('trainings')) || [];
+    let migrated = false;
+
+    trainings = trainings.map(training => {
+        // Alte Struktur: reps war ein einzelner Wert
+        // Neue Struktur: reps ist ein Array
+        if (typeof training.reps === 'number') {
+            migrated = true;
+            const sets = training.sets || 1;
+            const repsArray = [];
+
+            // Konvertiere einzelnen Wert in Array (alle Sätze mit gleichen Wiederholungen)
+            for (let i = 0; i < sets; i++) {
+                repsArray.push(training.reps);
+            }
+
+            return {
+                ...training,
+                reps: repsArray,
+                trainingType: training.trainingType || 'weight',
+                timeMinutes: training.timeMinutes || null,
+                timeSeconds: training.timeSeconds || null
+            };
+        }
+
+        // Falls trainingType fehlt, setze default
+        if (!training.trainingType) {
+            migrated = true;
+            return {
+                ...training,
+                trainingType: 'weight'
+            };
+        }
+
+        return training;
+    });
+
+    if (migrated) {
+        localStorage.setItem('trainings', JSON.stringify(trainings));
+        console.log('✅ Alte Trainingsdaten erfolgreich migriert!');
+    }
+
+    return trainings;
+}
+
+// Trainingseinträge aus localStorage laden (mit Migration)
+let trainings = migrateOldData();
 let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
 let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
@@ -384,7 +435,11 @@ function displayTrainings() {
             if (plan) {
                 const actualSets = training.sets;
                 const plannedSets = plan.sets;
-                const avgReps = Math.round(training.reps.reduce((a, b) => a + b, 0) / training.reps.length);
+
+                // Sicherer Durchschnitt berechnen
+                const avgReps = Array.isArray(training.reps)
+                    ? Math.round(training.reps.reduce((a, b) => a + b, 0) / training.reps.length)
+                    : training.reps || 0;
                 const plannedReps = plan.reps;
 
                 const setsMatch = actualSets >= plannedSets;
@@ -421,8 +476,10 @@ function displayTrainings() {
                 `;
             }
 
-            // Reps anzeigen
-            const repsDisplay = training.reps.join(', ');
+            // Reps anzeigen (mit Sicherheitscheck)
+            const repsDisplay = Array.isArray(training.reps)
+                ? training.reps.join(', ')
+                : training.reps || '0';
 
             // Gewicht oder Zeit anzeigen
             let valueDisplay = '';
@@ -566,7 +623,9 @@ function displayPersonalRecords() {
             year: 'numeric'
         });
 
-        const repsDisplay = record.reps.join(' × ');
+        const repsDisplay = Array.isArray(record.reps)
+            ? record.reps.join(' × ')
+            : `${record.sets} × ${record.reps || 0}`;
 
         return `
             <div class="record-card ${record.color}">
