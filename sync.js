@@ -49,13 +49,14 @@ async function syncFromCloud() {
     syncInProgress = true;
     updateSyncStatus('syncing', 'Synchronisiere...');
 
-    const snapshot = await db.collection('users')
+    // Trainings laden
+    const trainingsSnapshot = await db.collection('users')
       .doc(currentUser.uid)
       .collection('trainings')
       .get();
 
     const cloudTrainings = [];
-    snapshot.forEach(doc => {
+    trainingsSnapshot.forEach(doc => {
       cloudTrainings.push({ id: parseInt(doc.id), ...doc.data() });
     });
 
@@ -63,13 +64,28 @@ async function syncFromCloud() {
     trainings = mergeTrainings(trainings, cloudTrainings);
     localStorage.setItem('trainings', JSON.stringify(trainings));
 
+    // Daily Borg Values laden
+    const borgSnapshot = await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('dailyBorgValues')
+      .get();
+
+    const cloudBorgValues = [];
+    borgSnapshot.forEach(doc => {
+      cloudBorgValues.push(doc.data());
+    });
+
+    // Merge Borg Values
+    dailyBorgValues = mergeBorgValues(dailyBorgValues, cloudBorgValues);
+    localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
+
     displayTrainings();
     displayPersonalRecords();
 
     lastSyncTime = new Date();
     updateSyncStatus('synced', `Zuletzt synchronisiert: ${formatTime(lastSyncTime)}`);
 
-    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Einträge');
+    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Trainings,', cloudBorgValues.length, 'Borg-Werte');
   } catch (error) {
     console.error('Sync-Fehler:', error);
     updateSyncStatus('error', 'Sync-Fehler');
@@ -264,6 +280,7 @@ async function deleteDailyBorgFromCloud(date) {
 function startRealtimeSync() {
   if (!syncEnabled || !currentUser) return;
 
+  // Trainings Realtime-Sync
   db.collection('users')
     .doc(currentUser.uid)
     .collection('trainings')
@@ -301,6 +318,40 @@ function startRealtimeSync() {
       console.error('Realtime-Sync Fehler:', error);
       updateSyncStatus('error', 'Verbindungsfehler');
     });
+
+  // Daily Borg Values Realtime-Sync
+  db.collection('users')
+    .doc(currentUser.uid)
+    .collection('dailyBorgValues')
+    .onSnapshot((snapshot) => {
+      if (syncInProgress) return;
+
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+
+        if (change.type === 'added' || change.type === 'modified') {
+          const index = dailyBorgValues.findIndex(b => b.date === data.date);
+
+          if (index !== -1) {
+            dailyBorgValues[index] = data;
+          } else {
+            dailyBorgValues.push(data);
+          }
+        }
+
+        if (change.type === 'removed') {
+          dailyBorgValues = dailyBorgValues.filter(b => b.date !== data.date);
+        }
+      });
+
+      localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
+      displayTrainings(); // Borg-Werte werden in den Date-Blocks angezeigt
+
+      lastSyncTime = new Date();
+      updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
+    }, (error) => {
+      console.error('Borg Values Realtime-Sync Fehler:', error);
+    });
 }
 
 // Trainings mergen (Cloud hat Priorität bei Konflikten)
@@ -315,6 +366,23 @@ function mergeTrainings(local, cloud) {
   // Cloud-Trainings überschreiben lokale (Cloud hat Priorität)
   cloud.forEach(training => {
     merged.set(training.id, training);
+  });
+
+  return Array.from(merged.values());
+}
+
+// Borg Values mergen (Cloud hat Priorität bei Konflikten)
+function mergeBorgValues(local, cloud) {
+  const merged = new Map();
+
+  // Lokale Borg-Werte hinzufügen
+  local.forEach(borg => {
+    merged.set(borg.date, borg);
+  });
+
+  // Cloud Borg-Werte überschreiben lokale (Cloud hat Priorität)
+  cloud.forEach(borg => {
+    merged.set(borg.date, borg);
   });
 
   return Array.from(merged.values());
