@@ -57,6 +57,54 @@ header {
     margin-bottom: 30px;
 }
 
+/* Logo Container */
+.logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: logoFloat 6s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.app-logo {
+    max-width: 300px;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 0 30px rgba(255, 20, 147, 0.8))
+            drop-shadow(0 0 50px rgba(0, 255, 255, 0.6))
+            drop-shadow(0 0 70px rgba(255, 140, 0, 0.4));
+    animation: logoGlow 4s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+@keyframes logoGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 30px rgba(255, 20, 147, 0.8))
+                drop-shadow(0 0 50px rgba(0, 255, 255, 0.6))
+                drop-shadow(0 0 70px rgba(255, 140, 0, 0.4));
+    }
+    50% {
+        filter: drop-shadow(0 0 40px rgba(255, 20, 147, 1))
+                drop-shadow(0 0 60px rgba(0, 255, 255, 0.8))
+                drop-shadow(0 0 80px rgba(139, 0, 255, 0.6));
+    }
+}
+
+.app-logo:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 50px rgba(255, 20, 147, 1))
+            drop-shadow(0 0 70px rgba(0, 255, 255, 1))
+            drop-shadow(0 0 90px rgba(255, 140, 0, 0.8));
+}
+
 header h1 {
     font-size: 2.5rem;
     margin-bottom: 10px;
@@ -1307,6 +1355,15 @@ select:focus {
     /* Header */
     header {
         margin-bottom: 20px;
+    }
+
+    /* Logo */
+    .logo-container {
+        margin-bottom: 15px;
+    }
+
+    .app-logo {
+        max-width: 200px;
     }
 
     header h1 {
