@@ -205,6 +205,24 @@ function populateExerciseDropdown() {
     if (currentValue && exercises.includes(currentValue)) {
         exerciseSelect.value = currentValue;
     }
+
+    // Auch Plan Exercise Dropdown füllen
+    const planExerciseSelect = document.getElementById('planExercise');
+    if (planExerciseSelect) {
+        const planCurrentValue = planExerciseSelect.value;
+        planExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
+
+        exercises.forEach(exercise => {
+            const option = document.createElement('option');
+            option.value = exercise;
+            option.textContent = exercise;
+            planExerciseSelect.appendChild(option);
+        });
+
+        if (planCurrentValue && exercises.includes(planCurrentValue)) {
+            planExerciseSelect.value = planCurrentValue;
+        }
+    }
 }
 
 // ========================================
@@ -469,56 +487,6 @@ function displayTrainings() {
         const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
 
         const trainingsHTML = trainingsOfDay.map(training => {
-            // Soll/Ist Vergleich mit Plan
-            const plan = trainingPlans.find(p =>
-                p.exercise.toLowerCase() === training.exercise.toLowerCase()
-            );
-
-            let planComparisonHTML = '';
-            if (plan) {
-                const actualSets = training.sets;
-                const plannedSets = plan.sets;
-
-                // Sicherer Durchschnitt berechnen
-                const avgReps = Array.isArray(training.reps)
-                    ? Math.round(training.reps.reduce((a, b) => a + b, 0) / training.reps.length)
-                    : training.reps || 0;
-                const plannedReps = plan.reps;
-
-                const setsMatch = actualSets >= plannedSets;
-                const repsMatch = avgReps >= plannedReps;
-
-                let comparisonItems = '';
-
-                // Gewichtsvergleich (nur wenn Plan ein Gewicht hat und Training gewichtsbasiert ist)
-                if (plan.weight && training.trainingType === 'weight') {
-                    const weightMatch = training.weight >= plan.weight;
-                    comparisonItems += `
-                        <div class="comparison-item ${weightMatch ? 'success' : 'warning'}">
-                            <span>Gewicht: ${training.weight}/${plan.weight} kg</span>
-                            ${weightMatch ? '✅' : '⚠️'}
-                        </div>
-                    `;
-                }
-
-                comparisonItems += `
-                    <div class="comparison-item ${setsMatch ? 'success' : 'warning'}">
-                        <span>Sätze: ${actualSets}/${plannedSets}</span>
-                        ${setsMatch ? '✅' : '⚠️'}
-                    </div>
-                    <div class="comparison-item ${repsMatch ? 'success' : 'warning'}">
-                        <span>Ø Wdh.: ${avgReps}/${plannedReps}</span>
-                        ${repsMatch ? '✅' : '⚠️'}
-                    </div>
-                `;
-
-                planComparisonHTML = `
-                    <div class="plan-comparison">
-                        ${comparisonItems}
-                    </div>
-                `;
-            }
-
             // Reps anzeigen (mit Sicherheitscheck)
             const repsDisplay = Array.isArray(training.reps)
                 ? training.reps.join(', ')
@@ -538,7 +506,6 @@ function displayTrainings() {
                 <div class="training-item">
                     <div class="training-info">
                         <h3>${training.exercise}</h3>
-                        ${planComparisonHTML}
                         <div class="training-details">
                             <div class="detail-item">
                                 <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
@@ -763,17 +730,27 @@ function displayPersonalRecords() {
 planForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const weightValue = document.getElementById('planWeight').value;
+    const exercise = document.getElementById('planExercise').value;
+    const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
 
     const plan = {
-        id: Date.now(),
-        exercise: document.getElementById('planExercise').value,
-        weight: weightValue ? parseFloat(weightValue) : null,
-        sets: parseInt(document.getElementById('planSets').value),
-        reps: parseInt(document.getElementById('planReps').value)
+        id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
+        exercise: exercise,
+        weight6Reps: parseFloat(document.getElementById('weight6Reps').value),
+        weight10Reps: parseFloat(document.getElementById('weight10Reps').value),
+        weight3Reps: parseFloat(document.getElementById('weight3Reps').value)
     };
 
-    trainingPlans.push(plan);
+    if (existingPlanIndex !== -1) {
+        // Aktualisiere existierenden Plan
+        trainingPlans[existingPlanIndex] = plan;
+        showNotification('Gewichte aktualisiert!');
+    } else {
+        // Neuer Plan
+        trainingPlans.push(plan);
+        showNotification('Gewichte hinzugefügt!');
+    }
+
     localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
     // Zu Cloud synchronisieren
@@ -783,15 +760,14 @@ planForm.addEventListener('submit', async function(e) {
 
     displayTrainingPlans();
     planForm.reset();
-    showNotification('Plan hinzugefügt!');
 });
 
 function displayTrainingPlans() {
     if (trainingPlans.length === 0) {
         planList.innerHTML = `
             <div class="empty-state">
-                <p>Noch keine Trainingspläne erstellt.</p>
-                <p>Füge deinen ersten Plan hinzu! 📋</p>
+                <p>Noch keine Gewichte gespeichert.</p>
+                <p>Füge deine erste Gewichts-Referenz hinzu! 📋</p>
             </div>
         `;
         return;
@@ -801,21 +777,45 @@ function displayTrainingPlans() {
         <div class="plan-item">
             <div class="plan-info">
                 <h3>${plan.exercise}</h3>
-                <div class="plan-details">
-                    ${plan.weight ? `<span><strong>Soll Gewicht:</strong> ${plan.weight} kg</span>` : ''}
-                    <span><strong>Soll Sätze:</strong> ${plan.sets}</span>
-                    <span><strong>Soll Wiederholungen:</strong> ${plan.reps}</span>
+                <div class="weight-reference-table">
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">6 Wiederholungen:</div>
+                        <div class="weight-ref-value">${plan.weight6Reps || 0} kg</div>
+                    </div>
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">10 Wiederholungen:</div>
+                        <div class="weight-ref-value">${plan.weight10Reps || 0} kg</div>
+                    </div>
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">3 Wiederholungen:</div>
+                        <div class="weight-ref-value">${plan.weight3Reps || 0} kg</div>
+                    </div>
                 </div>
             </div>
             <div class="plan-actions">
+                <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
                 <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
             </div>
         </div>
     `).join('');
 }
 
+function editPlan(id) {
+    const plan = trainingPlans.find(p => p.id === id);
+    if (!plan) return;
+
+    // Formular mit Daten füllen
+    document.getElementById('planExercise').value = plan.exercise;
+    document.getElementById('weight6Reps').value = plan.weight6Reps || '';
+    document.getElementById('weight10Reps').value = plan.weight10Reps || '';
+    document.getElementById('weight3Reps').value = plan.weight3Reps || '';
+
+    // Scroll zum Formular
+    document.getElementById('planForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function deletePlan(id) {
-    if (confirm('Plan löschen?')) {
+    if (confirm('Gewichte für diese Übung löschen?')) {
         trainingPlans = trainingPlans.filter(p => p.id !== id);
         localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
@@ -825,9 +825,12 @@ async function deletePlan(id) {
         }
 
         displayTrainingPlans();
-        showNotification('Plan gelöscht!');
+        showNotification('Gewichte gelöscht!');
     }
 }
+
+// Globale Funktion für onclick-Handler
+window.editPlan = editPlan;
 
 // ========================================
 // EINSTELLUNGEN - KÖRPERGEWICHT

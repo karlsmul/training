@@ -903,6 +903,23 @@ select:focus {
     margin-bottom: 20px;
 }
 
+.plan-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.plan-subtitle {
+    color: #666;
+    font-size: 0.95rem;
+    margin-top: 5px;
+}
+
+.weight-reference-inputs {
+    display: grid;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
 .plan-list {
     display: grid;
     gap: 15px;
@@ -917,23 +934,51 @@ select:focus {
     grid-template-columns: 1fr auto;
     gap: 15px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.plan-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .plan-info h3 {
     color: #333;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
+    font-size: 1.2rem;
 }
 
-.plan-details {
+.weight-reference-table {
+    display: grid;
+    gap: 8px;
+}
+
+.weight-ref-row {
     display: flex;
-    gap: 15px;
-    font-size: 0.95rem;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.weight-ref-label {
+    font-size: 0.9rem;
     color: #666;
+    font-weight: 500;
+}
+
+.weight-ref-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #667eea;
 }
 
 .plan-actions {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
 }
 
 /* Stats Section */

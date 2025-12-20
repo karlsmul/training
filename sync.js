@@ -133,13 +133,13 @@ async function syncPlanToCloud(plan) {
       .doc(plan.id.toString())
       .set({
         exercise: plan.exercise,
-        weight: plan.weight,
-        sets: plan.sets,
-        reps: plan.reps,
+        weight6Reps: plan.weight6Reps || null,
+        weight10Reps: plan.weight10Reps || null,
+        weight3Reps: plan.weight3Reps || null,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
-    console.log('Trainingsplan zu Cloud synchronisiert:', plan.id);
+    console.log('Gewichts-Referenz zu Cloud synchronisiert:', plan.id);
   } catch (error) {
     console.error('Plan Upload-Fehler:', error);
   }

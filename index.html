@@ -134,39 +134,42 @@
                 <!-- Training Plan Tab -->
                 <div id="planTab" class="tab-content">
                     <div class="plan-header">
-                        <h2>Trainingsplan</h2>
-                        <p class="plan-subtitle">Plane deine nächsten Trainings</p>
+                        <h2>Aktuelle Gewichte</h2>
+                        <p class="plan-subtitle">Deine Gewichts-Referenzen für verschiedene Wiederholungsbereiche</p>
                     </div>
 
                     <div class="plan-form-container">
                         <form id="planForm">
                             <div class="form-group">
                                 <label for="planExercise">Übung:</label>
-                                <input type="text" id="planExercise" required placeholder="z.B. Bankdrücken">
+                                <select id="planExercise" required>
+                                    <option value="">-- Übung auswählen --</option>
+                                </select>
                             </div>
 
-                            <div class="form-group">
-                                <label for="planWeight">Soll Gewicht (kg):</label>
-                                <input type="number" id="planWeight" step="0.5" placeholder="z.B. 80">
-                            </div>
-
-                            <div class="form-row">
+                            <div class="weight-reference-inputs">
                                 <div class="form-group">
-                                    <label for="planSets">Soll Sätze:</label>
-                                    <input type="number" id="planSets" min="1" max="10" value="3" required>
+                                    <label for="weight6Reps">Gewicht für 6 Wdh. (kg):</label>
+                                    <input type="number" id="weight6Reps" step="0.5" placeholder="z.B. 80" required>
                                 </div>
+
                                 <div class="form-group">
-                                    <label for="planReps">Soll Wiederholungen:</label>
-                                    <input type="number" id="planReps" min="1" required placeholder="z.B. 10">
+                                    <label for="weight10Reps">Gewicht für 10 Wdh. (kg):</label>
+                                    <input type="number" id="weight10Reps" step="0.5" placeholder="z.B. 70" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="weight3Reps">Gewicht für 3 Wdh. (kg):</label>
+                                    <input type="number" id="weight3Reps" step="0.5" placeholder="z.B. 90" required>
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn-primary">Plan hinzufügen</button>
+                            <button type="submit" class="btn-primary">Gewichte speichern</button>
                         </form>
                     </div>
 
                     <div id="planList" class="plan-list">
-                        <!-- Trainingsplan wird hier angezeigt -->
+                        <!-- Gewichts-Referenzen werden hier angezeigt -->
                     </div>
                 </div>
 
