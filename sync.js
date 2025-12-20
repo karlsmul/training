@@ -79,13 +79,62 @@ async function syncFromCloud() {
     dailyBorgValues = mergeBorgValues(dailyBorgValues, cloudBorgValues);
     localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
 
+    // Plans laden
+    const plansSnapshot = await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('plans')
+      .get();
+
+    const cloudPlans = [];
+    plansSnapshot.forEach(doc => {
+      cloudPlans.push({ id: parseInt(doc.id), ...doc.data() });
+    });
+
+    // Merge Plans
+    trainingPlans = mergePlans(trainingPlans, cloudPlans);
+    localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+
+    // Body Weights laden
+    const bodyWeightsSnapshot = await db.collection('users')
+      .doc(currentUser.uid)
+      .collection('bodyWeights')
+      .get();
+
+    const cloudBodyWeights = [];
+    bodyWeightsSnapshot.forEach(doc => {
+      cloudBodyWeights.push({ id: parseInt(doc.id), ...doc.data() });
+    });
+
+    // Merge Body Weights
+    bodyWeights = mergeBodyWeights(bodyWeights, cloudBodyWeights);
+    localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
+
+    // Personal Info laden
+    const userDoc = await db.collection('users')
+      .doc(currentUser.uid)
+      .get();
+
+    if (userDoc.exists) {
+      const cloudPersonalInfo = userDoc.data();
+      if (cloudPersonalInfo.age !== undefined) {
+        personalInfo.age = cloudPersonalInfo.age;
+      }
+      if (cloudPersonalInfo.height !== undefined) {
+        personalInfo.height = cloudPersonalInfo.height;
+      }
+      localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+    }
+
     displayTrainings();
     displayPersonalRecords();
+    displayTrainingPlans();
+    displayBodyWeight();
+    displayStats();
 
     lastSyncTime = new Date();
     updateSyncStatus('synced', `Zuletzt synchronisiert: ${formatTime(lastSyncTime)}`);
 
-    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Trainings,', cloudBorgValues.length, 'Borg-Werte');
+    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Trainings,', cloudBorgValues.length, 'Borg-Werte,', cloudPlans.length, 'Pläne,', cloudBodyWeights.length, 'Körpergewichte');
   } catch (error) {
     console.error('Sync-Fehler:', error);
     updateSyncStatus('error', 'Sync-Fehler');
@@ -352,6 +401,111 @@ function startRealtimeSync() {
     }, (error) => {
       console.error('Borg Values Realtime-Sync Fehler:', error);
     });
+
+  // Plans Realtime-Sync
+  db.collection('users')
+    .doc(currentUser.uid)
+    .collection('plans')
+    .onSnapshot((snapshot) => {
+      if (syncInProgress) return;
+
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const id = parseInt(change.doc.id);
+
+        if (change.type === 'added' || change.type === 'modified') {
+          const index = trainingPlans.findIndex(p => p.id === id);
+          const plan = { id, ...data };
+
+          if (index !== -1) {
+            trainingPlans[index] = plan;
+          } else {
+            trainingPlans.push(plan);
+          }
+        }
+
+        if (change.type === 'removed') {
+          trainingPlans = trainingPlans.filter(p => p.id !== id);
+        }
+      });
+
+      localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+      displayTrainingPlans();
+
+      lastSyncTime = new Date();
+      updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
+    }, (error) => {
+      console.error('Plans Realtime-Sync Fehler:', error);
+    });
+
+  // Body Weights Realtime-Sync
+  db.collection('users')
+    .doc(currentUser.uid)
+    .collection('bodyWeights')
+    .onSnapshot((snapshot) => {
+      if (syncInProgress) return;
+
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const id = parseInt(change.doc.id);
+
+        if (change.type === 'added' || change.type === 'modified') {
+          const index = bodyWeights.findIndex(w => w.id === id);
+          const weight = { id, ...data };
+
+          if (index !== -1) {
+            bodyWeights[index] = weight;
+          } else {
+            bodyWeights.push(weight);
+          }
+        }
+
+        if (change.type === 'removed') {
+          bodyWeights = bodyWeights.filter(w => w.id !== id);
+        }
+      });
+
+      localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
+      displayBodyWeight();
+      displayStats();
+
+      lastSyncTime = new Date();
+      updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
+    }, (error) => {
+      console.error('Body Weights Realtime-Sync Fehler:', error);
+    });
+
+  // Personal Info Realtime-Sync
+  db.collection('users')
+    .doc(currentUser.uid)
+    .onSnapshot((snapshot) => {
+      if (syncInProgress) return;
+
+      if (snapshot.exists) {
+        const data = snapshot.data();
+        let updated = false;
+
+        if (data.age !== undefined && data.age !== personalInfo.age) {
+          personalInfo.age = data.age;
+          updated = true;
+        }
+
+        if (data.height !== undefined && data.height !== personalInfo.height) {
+          personalInfo.height = data.height;
+          updated = true;
+        }
+
+        if (updated) {
+          localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+          displayStats();
+
+          lastSyncTime = new Date();
+          updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
+        }
+      }
+    }, (error) => {
+      console.error('Personal Info Realtime-Sync Fehler:', error);
+    });
 }
 
 // Trainings mergen (Cloud hat Priorität bei Konflikten)
@@ -383,6 +537,40 @@ function mergeBorgValues(local, cloud) {
   // Cloud Borg-Werte überschreiben lokale (Cloud hat Priorität)
   cloud.forEach(borg => {
     merged.set(borg.date, borg);
+  });
+
+  return Array.from(merged.values());
+}
+
+// Plans mergen (Cloud hat Priorität bei Konflikten)
+function mergePlans(local, cloud) {
+  const merged = new Map();
+
+  // Lokale Pläne hinzufügen
+  local.forEach(plan => {
+    merged.set(plan.id, plan);
+  });
+
+  // Cloud-Pläne überschreiben lokale (Cloud hat Priorität)
+  cloud.forEach(plan => {
+    merged.set(plan.id, plan);
+  });
+
+  return Array.from(merged.values());
+}
+
+// Body Weights mergen (Cloud hat Priorität bei Konflikten)
+function mergeBodyWeights(local, cloud) {
+  const merged = new Map();
+
+  // Lokale Körpergewichte hinzufügen
+  local.forEach(weight => {
+    merged.set(weight.id, weight);
+  });
+
+  // Cloud Körpergewichte überschreiben lokale (Cloud hat Priorität)
+  cloud.forEach(weight => {
+    merged.set(weight.id, weight);
   });
 
   return Array.from(merged.values());
