@@ -78,6 +78,9 @@ header {
     max-width: 300px;
     width: 100%;
     height: auto;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 50%;
     filter: drop-shadow(0 0 30px rgba(255, 20, 147, 0.8))
             drop-shadow(0 0 50px rgba(0, 255, 255, 0.6))
             drop-shadow(0 0 70px rgba(255, 140, 0, 0.4));
