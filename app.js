@@ -59,17 +59,7 @@ let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
 let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
-let exercises = JSON.parse(localStorage.getItem('exercises')) || [
-    'Bankdrücken',
-    'Kniebeugen Front',
-    'Kreuzheben',
-    'Schulterdrücken',
-    'Klimmzüge',
-    'Dips',
-    'Rudern',
-    'Bizeps Curls',
-    'Trizeps Extensions'
-];
+let exercises = JSON.parse(localStorage.getItem('exercises')) || [];
 
 // Edit-Modus Tracking
 let editMode = false;
