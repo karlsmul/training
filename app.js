@@ -482,6 +482,11 @@ function displayTrainings() {
                 ? training.reps.join(', ')
                 : training.reps || '0';
 
+            // Summe der Wiederholungen berechnen
+            const totalReps = Array.isArray(training.reps)
+                ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
+                : parseInt(training.reps || 0);
+
             // Gewicht oder Zeit anzeigen
             let valueDisplay = '';
             if (training.trainingType === 'time') {
@@ -508,6 +513,10 @@ function displayTrainings() {
                             <div class="detail-item">
                                 <div class="detail-label">Wiederholungen</div>
                                 <div class="detail-value">${repsDisplay}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Gesamt Wdh.</div>
+                                <div class="detail-value">${totalReps}</div>
                             </div>
                         </div>
                     </div>
@@ -973,35 +982,38 @@ function loadPersonalInfo() {
 // ========================================
 
 function updateStatistics() {
-    // Trainings diesen Monat
+    // Einzigartige Trainingstage ermitteln
+    const uniqueDates = [...new Set(trainings.map(t => t.date))];
+
+    // Trainingstage diesen Monat
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const monthlyCount = trainings.filter(t => {
-        const date = new Date(t.date);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    }).length;
+    const monthlyDates = uniqueDates.filter(date => {
+        const dateObj = new Date(date);
+        return dateObj.getMonth() === currentMonth && dateObj.getFullYear() === currentYear;
+    });
 
-    document.getElementById('monthlyTrainings').textContent = monthlyCount;
+    document.getElementById('monthlyTrainings').textContent = monthlyDates.length;
 
     // Durchschnitt pro Monat
-    if (trainings.length > 0) {
-        const dates = trainings.map(t => new Date(t.date));
+    if (uniqueDates.length > 0) {
+        const dates = uniqueDates.map(d => new Date(d));
         const minDate = new Date(Math.min(...dates));
         const maxDate = new Date(Math.max(...dates));
 
         const monthsDiff = (maxDate.getFullYear() - minDate.getFullYear()) * 12 +
                           (maxDate.getMonth() - minDate.getMonth()) + 1;
 
-        const avgMonthly = Math.round(trainings.length / monthsDiff);
+        const avgMonthly = Math.round(uniqueDates.length / monthsDiff);
         document.getElementById('avgMonthlyTrainings').textContent = avgMonthly;
     } else {
         document.getElementById('avgMonthlyTrainings').textContent = 0;
     }
 
-    // Gesamt Trainings
-    document.getElementById('totalTrainings').textContent = trainings.length;
+    // Gesamt Trainingstage
+    document.getElementById('totalTrainings').textContent = uniqueDates.length;
 }
 
 // ========================================
