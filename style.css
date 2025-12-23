@@ -1047,6 +1047,38 @@ select:focus {
     font-weight: 600;
 }
 
+/* Form Checkbox */
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.form-checkbox input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.form-checkbox label {
+    font-size: 0.9rem;
+    color: #666;
+    cursor: pointer;
+    margin: 0;
+}
+
+/* Weight per set input */
+.rep-input-group.with-weight {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.rep-input-group.with-weight label {
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
 /* Plan Section */
 .plan-form-container {
     background: #f8f9fa;

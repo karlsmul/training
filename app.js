@@ -89,6 +89,7 @@ const repsInputsContainer = document.getElementById('repsInputs');
 const weightGroup = document.getElementById('weightGroup');
 const timeGroup = document.getElementById('timeGroup');
 const toggleBtns = document.querySelectorAll('.toggle-btn');
+const differentWeightsCheckbox = document.getElementById('differentWeights');
 
 // Plan elements
 const planForm = document.getElementById('planForm');
@@ -153,19 +154,29 @@ toggleBtns.forEach(btn => {
 // ========================================
 
 setsInput.addEventListener('input', generateRepsInputs);
+differentWeightsCheckbox.addEventListener('change', generateRepsInputs);
 
 function generateRepsInputs() {
     const numSets = parseInt(setsInput.value) || 3;
+    const useDifferentWeights = differentWeightsCheckbox.checked && currentTrainingType === 'weight';
     repsInputsContainer.innerHTML = '';
 
     for (let i = 1; i <= numSets; i++) {
         const repInputGroup = document.createElement('div');
-        repInputGroup.className = 'rep-input-group';
+        repInputGroup.className = useDifferentWeights ? 'rep-input-group with-weight' : 'rep-input-group';
 
-        repInputGroup.innerHTML = `
-            <label for="rep${i}">Satz ${i}</label>
-            <input type="number" id="rep${i}" min="1" placeholder="Wdh." required>
-        `;
+        if (useDifferentWeights) {
+            repInputGroup.innerHTML = `
+                <label for="rep${i}">Satz ${i}</label>
+                <input type="number" id="rep${i}" min="1" placeholder="Wdh." required>
+                <input type="number" id="weight${i}" step="0.5" placeholder="kg" required>
+            `;
+        } else {
+            repInputGroup.innerHTML = `
+                <label for="rep${i}">Satz ${i}</label>
+                <input type="number" id="rep${i}" min="1" placeholder="Wdh." required>
+            `;
+        }
 
         repsInputsContainer.appendChild(repInputGroup);
     }
@@ -224,11 +235,18 @@ form.addEventListener('submit', async function(e) {
 
     const numSets = parseInt(setsInput.value);
     const reps = [];
+    const weightsPerSet = [];
+    const useDifferentWeights = differentWeightsCheckbox.checked && currentTrainingType === 'weight';
 
-    // Wiederholungen pro Satz sammeln
+    // Wiederholungen und optional Gewichte pro Satz sammeln
     for (let i = 1; i <= numSets; i++) {
         const repValue = parseInt(document.getElementById(`rep${i}`).value);
         reps.push(repValue);
+
+        if (useDifferentWeights) {
+            const weightValue = parseFloat(document.getElementById(`weight${i}`).value);
+            weightsPerSet.push(weightValue);
+        }
     }
 
     let training;
@@ -241,7 +259,8 @@ form.addEventListener('submit', async function(e) {
                 id: editingId,
                 exercise: document.getElementById('exercise').value,
                 trainingType: currentTrainingType,
-                weight: currentTrainingType === 'weight' ? parseFloat(document.getElementById('weight').value) : null,
+                weight: currentTrainingType === 'weight' && !useDifferentWeights ? parseFloat(document.getElementById('weight').value) : null,
+                weightsPerSet: useDifferentWeights ? weightsPerSet : null,
                 timeMinutes: currentTrainingType === 'time' ? parseInt(document.getElementById('timeMinutes').value) || 0 : null,
                 timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
                 sets: numSets,
@@ -262,7 +281,8 @@ form.addEventListener('submit', async function(e) {
             id: Date.now(),
             exercise: document.getElementById('exercise').value,
             trainingType: currentTrainingType,
-            weight: currentTrainingType === 'weight' ? parseFloat(document.getElementById('weight').value) : null,
+            weight: currentTrainingType === 'weight' && !useDifferentWeights ? parseFloat(document.getElementById('weight').value) : null,
+            weightsPerSet: useDifferentWeights ? weightsPerSet : null,
             timeMinutes: currentTrainingType === 'time' ? parseInt(document.getElementById('timeMinutes').value) || 0 : null,
             timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
             sets: numSets,
@@ -318,7 +338,14 @@ function editTraining(id) {
     if (currentTrainingType === 'weight') {
         weightGroup.style.display = 'block';
         timeGroup.style.display = 'none';
-        document.getElementById('weight').value = training.weight || '';
+
+        // Check if training has weightsPerSet
+        if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+            differentWeightsCheckbox.checked = true;
+        } else {
+            differentWeightsCheckbox.checked = false;
+            document.getElementById('weight').value = training.weight || '';
+        }
     } else {
         weightGroup.style.display = 'none';
         timeGroup.style.display = 'block';
@@ -335,6 +362,14 @@ function editTraining(id) {
         const repInput = document.getElementById(`rep${index + 1}`);
         if (repInput) {
             repInput.value = rep;
+        }
+
+        // Fill weight inputs if weightsPerSet exists
+        if (training.weightsPerSet && training.weightsPerSet[index] !== undefined) {
+            const weightInput = document.getElementById(`weight${index + 1}`);
+            if (weightInput) {
+                weightInput.value = training.weightsPerSet[index];
+            }
         }
     });
 
@@ -353,6 +388,7 @@ function cancelEdit() {
 
     form.reset();
     setCurrentDate();
+    differentWeightsCheckbox.checked = false;
     generateRepsInputs();
 
     // Training Type zurücksetzen
@@ -494,7 +530,12 @@ function displayTrainings() {
                 const secs = training.timeSeconds || 0;
                 valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
             } else {
-                valueDisplay = `${training.weight} kg`;
+                // Check if individual weights per set exist
+                if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+                    valueDisplay = training.weightsPerSet.join(' / ') + ' kg';
+                } else {
+                    valueDisplay = `${training.weight} kg`;
+                }
             }
 
             return `

@@ -156,6 +156,7 @@ async function syncToCloud(training) {
         exercise: training.exercise,
         trainingType: training.trainingType || 'weight',
         weight: training.weight,
+        weightsPerSet: training.weightsPerSet || null,
         timeMinutes: training.timeMinutes,
         timeSeconds: training.timeSeconds,
         sets: training.sets,
