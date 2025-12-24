@@ -959,6 +959,11 @@ exerciseForm.addEventListener('submit', function(e) {
     exercises.sort();
     localStorage.setItem('exercises', JSON.stringify(exercises));
 
+    // Sync zur Cloud
+    if (typeof syncExercisesToCloud === 'function') {
+        syncExercisesToCloud();
+    }
+
     populateExerciseDropdown();
     displayExerciseList();
     exerciseForm.reset();
@@ -983,6 +988,12 @@ function deleteExercise(exerciseName) {
     if (confirm(`Übung "${exerciseName}" wirklich löschen?`)) {
         exercises = exercises.filter(e => e !== exerciseName);
         localStorage.setItem('exercises', JSON.stringify(exercises));
+
+        // Sync zur Cloud
+        if (typeof syncExercisesToCloud === 'function') {
+            syncExercisesToCloud();
+        }
+
         populateExerciseDropdown();
         displayExerciseList();
         showNotification('Übung gelöscht!');

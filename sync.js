@@ -122,7 +122,11 @@ async function syncFromCloud() {
       if (cloudPersonalInfo.height !== undefined) {
         personalInfo.height = cloudPersonalInfo.height;
       }
+      if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises)) {
+        exercises = cloudPersonalInfo.exercises;
+      }
       localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+      localStorage.setItem('exercises', JSON.stringify(exercises));
     }
 
     displayTrainings();
@@ -130,11 +134,13 @@ async function syncFromCloud() {
     displayTrainingPlans();
     displayBodyWeight();
     displayStats();
+    populateExerciseDropdown();
+    displayExerciseList();
 
     lastSyncTime = new Date();
     updateSyncStatus('synced', `Zuletzt synchronisiert: ${formatTime(lastSyncTime)}`);
 
-    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Trainings,', cloudBorgValues.length, 'Borg-Werte,', cloudPlans.length, 'Pläne,', cloudBodyWeights.length, 'Körpergewichte');
+    console.log('Sync von Cloud abgeschlossen:', cloudTrainings.length, 'Trainings,', cloudBorgValues.length, 'Borg-Werte,', cloudPlans.length, 'Pläne,', cloudBodyWeights.length, 'Körpergewichte,', exercises.length, 'Übungen');
   } catch (error) {
     console.error('Sync-Fehler:', error);
     updateSyncStatus('error', 'Sync-Fehler');
@@ -226,12 +232,31 @@ async function syncPersonalInfoToCloud(info) {
       .set({
         age: info.age,
         height: info.height,
+        exercises: exercises,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
     console.log('Persönliche Info zu Cloud synchronisiert');
   } catch (error) {
     console.error('Personal Info Upload-Fehler:', error);
+  }
+}
+
+// Übungen zu Cloud synchronisieren
+async function syncExercisesToCloud() {
+  if (!syncEnabled || !currentUser) return;
+
+  try {
+    await db.collection('users')
+      .doc(currentUser.uid)
+      .set({
+        exercises: exercises,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+    console.log('Übungen zu Cloud synchronisiert:', exercises.length);
+  } catch (error) {
+    console.error('Exercises Upload-Fehler:', error);
   }
 }
 
@@ -476,7 +501,7 @@ function startRealtimeSync() {
       console.error('Body Weights Realtime-Sync Fehler:', error);
     });
 
-  // Personal Info Realtime-Sync
+  // Personal Info & Exercises Realtime-Sync
   db.collection('users')
     .doc(currentUser.uid)
     .onSnapshot((snapshot) => {
@@ -494,6 +519,18 @@ function startRealtimeSync() {
         if (data.height !== undefined && data.height !== personalInfo.height) {
           personalInfo.height = data.height;
           updated = true;
+        }
+
+        if (data.exercises && Array.isArray(data.exercises)) {
+          const currentExercises = JSON.stringify(exercises);
+          const newExercises = JSON.stringify(data.exercises);
+          if (currentExercises !== newExercises) {
+            exercises = data.exercises;
+            localStorage.setItem('exercises', JSON.stringify(exercises));
+            populateExerciseDropdown();
+            displayExerciseList();
+            updated = true;
+          }
         }
 
         if (updated) {
@@ -762,6 +799,7 @@ window.syncToCloud = syncToCloud;
 window.syncPlanToCloud = syncPlanToCloud;
 window.syncBodyWeightToCloud = syncBodyWeightToCloud;
 window.syncPersonalInfoToCloud = syncPersonalInfoToCloud;
+window.syncExercisesToCloud = syncExercisesToCloud;
 window.syncDailyBorgToCloud = syncDailyBorgToCloud;
 window.deleteFromCloud = deleteFromCloud;
 window.deletePlanFromCloud = deletePlanFromCloud;
