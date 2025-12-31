@@ -693,15 +693,28 @@ function displayPersonalRecords() {
                 return trainingMaxWeight > maxWeight ? training : max;
             });
 
-            // Höchstes Gewicht für Anzeige berechnen
+            // Höchstes Gewicht und entsprechende Wiederholungen für Anzeige berechnen
             let displayWeight = bestTraining.weight || 0;
+            let displayReps = bestTraining.reps;
+
             if (bestTraining.weightsPerSet && bestTraining.weightsPerSet.length > 0) {
-                displayWeight = Math.max(...bestTraining.weightsPerSet);
+                // Finde den Index des höchsten Gewichts
+                const maxWeightIndex = bestTraining.weightsPerSet.indexOf(Math.max(...bestTraining.weightsPerSet));
+                displayWeight = bestTraining.weightsPerSet[maxWeightIndex];
+
+                // Zeige nur die Wiederholungen des Satzes mit dem höchsten Gewicht
+                if (Array.isArray(bestTraining.reps)) {
+                    displayReps = bestTraining.reps[maxWeightIndex];
+                }
+            } else if (Array.isArray(bestTraining.reps)) {
+                // Wenn alle Sätze das gleiche Gewicht haben, zeige nur die höchste Wiederholungszahl
+                displayReps = Math.max(...bestTraining.reps);
             }
 
             records[exerciseName] = {
                 ...bestTraining,
-                weight: displayWeight,  // Überschreibe mit höchstem Gewicht
+                weight: displayWeight,
+                reps: displayReps,
                 icon: exerciseData.icon,
                 color: exerciseData.color,
                 totalLifts: exerciseTrainings.length
@@ -747,9 +760,8 @@ function displayPersonalRecords() {
             year: 'numeric'
         });
 
-        const repsDisplay = Array.isArray(record.reps)
-            ? record.reps.join(' × ')
-            : `${record.sets} × ${record.reps || 0}`;
+        // Zeige nur die Wiederholungszahl des besten Satzes
+        const repsDisplay = record.reps || 0;
 
         return `
             <div class="record-card ${record.color}">
