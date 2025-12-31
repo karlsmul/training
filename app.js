@@ -678,11 +678,30 @@ function displayPersonalRecords() {
 
         if (exerciseTrainings.length > 0) {
             const bestTraining = exerciseTrainings.reduce((max, training) => {
-                return training.weight > max.weight ? training : max;
+                // Höchstes Gewicht für dieses Training ermitteln
+                let trainingMaxWeight = training.weight || 0;
+                if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+                    trainingMaxWeight = Math.max(...training.weightsPerSet);
+                }
+
+                // Höchstes Gewicht für aktuelles Maximum ermitteln
+                let maxWeight = max.weight || 0;
+                if (max.weightsPerSet && max.weightsPerSet.length > 0) {
+                    maxWeight = Math.max(...max.weightsPerSet);
+                }
+
+                return trainingMaxWeight > maxWeight ? training : max;
             });
+
+            // Höchstes Gewicht für Anzeige berechnen
+            let displayWeight = bestTraining.weight || 0;
+            if (bestTraining.weightsPerSet && bestTraining.weightsPerSet.length > 0) {
+                displayWeight = Math.max(...bestTraining.weightsPerSet);
+            }
 
             records[exerciseName] = {
                 ...bestTraining,
+                weight: displayWeight,  // Überschreibe mit höchstem Gewicht
                 icon: exerciseData.icon,
                 color: exerciseData.color,
                 totalLifts: exerciseTrainings.length
