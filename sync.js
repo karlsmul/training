@@ -64,6 +64,14 @@ async function syncFromCloud() {
     trainings = mergeTrainings(trainings, cloudTrainings);
     localStorage.setItem('trainings', JSON.stringify(trainings));
 
+    // Upload aller lokalen Trainings zur Cloud, die noch nicht dort sind
+    for (const training of trainings) {
+      const existsInCloud = cloudTrainings.some(ct => ct.id === training.id);
+      if (!existsInCloud) {
+        await syncToCloud(training);
+      }
+    }
+
     // Daily Borg Values laden
     const borgSnapshot = await db.collection('users')
       .doc(currentUser.uid)
@@ -78,6 +86,14 @@ async function syncFromCloud() {
     // Merge Borg Values
     dailyBorgValues = mergeBorgValues(dailyBorgValues, cloudBorgValues);
     localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
+
+    // Upload aller lokalen Borg Values zur Cloud, die noch nicht dort sind
+    for (const borgValue of dailyBorgValues) {
+      const existsInCloud = cloudBorgValues.some(cb => cb.date === borgValue.date);
+      if (!existsInCloud) {
+        await syncDailyBorgToCloud(borgValue);
+      }
+    }
 
     // Plans laden
     const plansSnapshot = await db.collection('users')
@@ -94,6 +110,14 @@ async function syncFromCloud() {
     trainingPlans = mergePlans(trainingPlans, cloudPlans);
     localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
+    // Upload aller lokalen Plans zur Cloud, die noch nicht dort sind
+    for (const plan of trainingPlans) {
+      const existsInCloud = cloudPlans.some(cp => cp.id === plan.id);
+      if (!existsInCloud) {
+        await syncPlanToCloud(plan);
+      }
+    }
+
     // Body Weights laden
     const bodyWeightsSnapshot = await db.collection('users')
       .doc(currentUser.uid)
@@ -109,11 +133,21 @@ async function syncFromCloud() {
     bodyWeights = mergeBodyWeights(bodyWeights, cloudBodyWeights);
     localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
 
+    // Upload aller lokalen Body Weights zur Cloud, die noch nicht dort sind
+    for (const weight of bodyWeights) {
+      const existsInCloud = cloudBodyWeights.some(cw => cw.id === weight.id);
+      if (!existsInCloud) {
+        await syncBodyWeightToCloud(weight);
+      }
+    }
+
     // Personal Info laden
     const userDoc = await db.collection('users')
       .doc(currentUser.uid)
       .get();
 
+    // Merge Personal Info und Exercises
+    let hasLocalData = false;
     if (userDoc.exists) {
       const cloudPersonalInfo = userDoc.data();
       if (cloudPersonalInfo.age !== undefined) {
@@ -123,10 +157,19 @@ async function syncFromCloud() {
         personalInfo.height = cloudPersonalInfo.height;
       }
       if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises)) {
-        exercises = cloudPersonalInfo.exercises;
+        // Merge lokale und Cloud-Übungen
+        const mergedExercises = [...new Set([...exercises, ...cloudPersonalInfo.exercises])];
+        exercises = mergedExercises.sort();
       }
       localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
       localStorage.setItem('exercises', JSON.stringify(exercises));
+    } else {
+      hasLocalData = true;
+    }
+
+    // Upload Personal Info und Exercises zur Cloud, wenn noch nicht vorhanden
+    if (hasLocalData || (personalInfo.age || personalInfo.height || exercises.length > 0)) {
+      await syncPersonalInfoToCloud(personalInfo);
     }
 
     displayTrainings();
