@@ -175,7 +175,7 @@ async function syncFromCloud() {
     displayTrainings();
     displayPersonalRecords();
     displayTrainingPlans();
-    displayBodyWeight();
+    displayBodyWeightHistory();
     displayStats();
     populateExerciseDropdown();
     displayExerciseList();
@@ -535,7 +535,7 @@ function startRealtimeSync() {
       });
 
       localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
-      displayBodyWeight();
+      displayBodyWeightHistory();
       displayStats();
 
       lastSyncTime = new Date();

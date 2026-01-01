@@ -1508,6 +1508,15 @@ function handleEmailRegister() {
 window.handleEmailLogin = handleEmailLogin;
 window.handleEmailRegister = handleEmailRegister;
 
+// Display-Funktionen für sync.js exportieren
+window.displayTrainings = displayTrainings;
+window.displayPersonalRecords = displayPersonalRecords;
+window.displayTrainingPlans = displayTrainingPlans;
+window.displayBodyWeightHistory = displayBodyWeightHistory;
+window.displayStats = displayStats;
+window.populateExerciseDropdown = populateExerciseDropdown;
+window.displayExerciseList = displayExerciseList;
+
 // ========================================
 // APP INITIALISIERUNG
 // ========================================
