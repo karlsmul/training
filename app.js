@@ -938,7 +938,10 @@ function displayBodyWeightHistory() {
         return;
     }
 
-    bodyWeightHistory.innerHTML = bodyWeights.map(entry => {
+    // Sortiere nach Datum absteigend (neueste zuerst)
+    const sortedWeights = [...bodyWeights].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    bodyWeightHistory.innerHTML = sortedWeights.map(entry => {
         const date = new Date(entry.date);
         const formattedDate = date.toLocaleDateString('de-DE', {
             day: '2-digit',
