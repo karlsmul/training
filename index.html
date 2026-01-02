@@ -312,11 +312,11 @@
     <!-- Login Modal -->
     <div id="loginModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="modal-close" onclick="hideLoginModal()">&times;</span>
+            <span class="modal-close" id="modalClose">&times;</span>
             <h2>🔐 Anmelden</h2>
             <p>Melde dich an, um deine Trainings in der Cloud zu synchronisieren</p>
 
-            <button onclick="loginWithGoogle()" class="btn-google">
+            <button id="googleLoginButton" class="btn-google">
                 <span class="google-icon">G</span>
                 Mit Google anmelden
             </button>
@@ -364,10 +364,36 @@
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
+
+                        // Prüfe auf Updates alle 60 Sekunden
+                        setInterval(() => {
+                            registration.update();
+                        }, 60000);
+
+                        // Wenn ein Update wartet, aktiviere es sofort
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('Neuer Service Worker verfügbar - Seite wird neu geladen');
+                                    window.location.reload();
+                                }
+                            });
+                        });
                     })
                     .catch(error => {
                         console.log('Service Worker Registrierung fehlgeschlagen:', error);
                     });
+            });
+
+            // Wenn der Controller sich ändert (neuer SW aktiv), lade die Seite neu
+            let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    console.log('Service Worker aktualisiert - Seite wird neu geladen');
+                    window.location.reload();
+                }
             });
         }
     </script>

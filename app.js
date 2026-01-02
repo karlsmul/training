@@ -1599,6 +1599,28 @@ async function initApp() {
         });
     }
 
+    // Event Listener für Modal-Close-Button
+    const modalClose = document.getElementById('modalClose');
+    if (modalClose) {
+        modalClose.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof window.hideLoginModal === 'function') {
+                window.hideLoginModal();
+            }
+        });
+    }
+
+    // Event Listener für Google-Login-Button
+    const googleLoginButton = document.getElementById('googleLoginButton');
+    if (googleLoginButton) {
+        googleLoginButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (typeof window.loginWithGoogle === 'function') {
+                window.loginWithGoogle();
+            }
+        });
+    }
+
     // Event Listener für initialen Login-Button
     const initialLoginButton = document.getElementById('loginButton');
     if (initialLoginButton) {

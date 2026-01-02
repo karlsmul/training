@@ -40,7 +40,7 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// Fetch - Versuche zuerst Cache, dann Netzwerk
+// Fetch - Network First für HTML/JS/CSS, Cache als Fallback
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
@@ -55,38 +55,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Nur lokale App-Dateien cachen
+  // NETWORK FIRST Strategie für lokale App-Dateien
+  // Dies stellt sicher, dass immer die neueste Version geladen wird
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then(response => {
-        // Cache hit - gib die gecachte Response zurück
-        if (response) {
-          return response;
+        // Valide Response vom Netzwerk - update Cache
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        // Clone die Request - eine Request ist ein Stream und kann nur einmal verwendet werden
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then(response => {
-          // Prüfe ob valide Response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
+        return response;
+      })
+      .catch(() => {
+        // Netzwerk fehlgeschlagen - versuche Cache
+        return caches.match(event.request).then(cachedResponse => {
+          if (cachedResponse) {
+            console.log('Serving from cache (offline):', event.request.url);
+            return cachedResponse;
           }
 
-          // Nur lokale Dateien cachen (gleiche Domain)
-          if (url.origin === location.origin) {
-            // Clone die Response - eine Response ist ein Stream und kann nur einmal verwendet werden
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-          }
-
-          return response;
-        }).catch(() => {
-          // Netzwerkfehler - zeige Offline-Nachricht nur für lokale Anfragen
+          // Kein Cache verfügbar
           if (url.origin === location.origin) {
             return new Response('Offline - Bitte überprüfe deine Internetverbindung', {
               status: 503,
@@ -96,7 +87,7 @@ self.addEventListener('fetch', event => {
               })
             });
           }
-          throw new Error('Network error');
+          throw new Error('Network error and no cache available');
         });
       })
   );
