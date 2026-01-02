@@ -1,9 +1,11 @@
-const CACHE_NAME = 'krafttraining-v2';
+const CACHE_NAME = 'krafttraining-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/style.css',
   '/app.js',
+  '/sync.js',
+  '/firebase-config.js',
   '/manifest.json'
 ];
 
