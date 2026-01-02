@@ -16,8 +16,9 @@ async function initSync() {
   auth = window.auth;
 
   if (!firebaseReady || !db || !auth) {
-    console.log('Firebase nicht verfügbar - App läuft im Offline-Modus');
-    updateSyncStatus('offline', 'Nur lokal (kein Cloud-Sync)');
+    console.warn('Firebase nicht verfügbar - App läuft nur mit lokaler Speicherung');
+    updateSyncStatus('not_logged_in', 'Cloud-Sync nicht verfügbar');
+    // Trotzdem weiterlaufen - App funktioniert offline
     return false;
   }
 
@@ -42,7 +43,7 @@ async function initSync() {
       currentUser = null;
       syncEnabled = false;
       console.log('Nicht angemeldet');
-      updateSyncStatus('offline', 'Nicht angemeldet');
+      updateSyncStatus('not_logged_in', 'Anmelden für Cloud-Sync');
       hideUserInfo();
     }
   });
@@ -790,6 +791,7 @@ function updateSyncStatus(status, message) {
     'synced': '✅',
     'syncing': '🔄',
     'offline': '📴',
+    'not_logged_in': '🔓',
     'error': '⚠️'
   }[status] || '❓';
 
