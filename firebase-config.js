@@ -21,9 +21,6 @@ const firebaseConfig = {
 };
 
 // Firebase initialisieren
-let db = null;
-let auth = null;
-
 async function initFirebase() {
   try {
     // Prüfe ob Firebase SDK geladen wurde
@@ -49,7 +46,7 @@ async function initFirebase() {
     }
 
     // Initialisiere Firestore mit Offline-Persistenz
-    db = firebase.firestore();
+    const db = firebase.firestore();
 
     // Versuche Offline-Persistenz zu aktivieren
     try {
@@ -66,7 +63,7 @@ async function initFirebase() {
     }
 
     // Initialisiere Authentication
-    auth = firebase.auth();
+    const auth = firebase.auth();
     console.log('Firebase Auth initialisiert');
 
     // Exportiere db und auth global
@@ -84,5 +81,4 @@ async function initFirebase() {
 // Exportiere für globale Verwendung
 window.firebaseConfig = firebaseConfig;
 window.initFirebase = initFirebase;
-window.db = db;
-window.auth = auth;
+// db und auth werden in initFirebase() zu window hinzugefügt

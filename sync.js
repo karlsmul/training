@@ -4,7 +4,7 @@ let currentUser = null;
 let syncInProgress = false;
 let lastSyncTime = null;
 
-// Referenzen zu Firebase (werden in initFirebase gesetzt)
+// Firebase-Referenzen (werden in initSync von window geholt)
 let db, auth;
 
 // Sync initialisieren
