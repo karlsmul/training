@@ -1604,21 +1604,40 @@ async function initApp() {
     if (modalClose) {
         modalClose.addEventListener('click', (e) => {
             e.preventDefault();
-            if (typeof window.hideLoginModal === 'function') {
-                window.hideLoginModal();
+            const modal = document.getElementById('loginModal');
+            if (modal) {
+                modal.style.display = 'none';
+                console.log('Login-Modal geschlossen');
             }
         });
+        console.log('Modal-Close Event Listener hinzugefügt');
     }
 
     // Event Listener für Google-Login-Button
     const googleLoginButton = document.getElementById('googleLoginButton');
     if (googleLoginButton) {
-        googleLoginButton.addEventListener('click', (e) => {
+        googleLoginButton.addEventListener('click', async (e) => {
             e.preventDefault();
+            console.log('Google-Login Button geklickt');
             if (typeof window.loginWithGoogle === 'function') {
-                window.loginWithGoogle();
+                await window.loginWithGoogle();
+            } else {
+                console.error('loginWithGoogle Funktion nicht verfügbar - Firebase möglicherweise nicht geladen');
             }
         });
+        console.log('Google-Login Event Listener hinzugefügt');
+    }
+
+    // Direkte Login-Modal-Funktion (Fallback wenn sync.js nicht geladen)
+    function openLoginModal() {
+        console.log('openLoginModal aufgerufen');
+        const modal = document.getElementById('loginModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('Login-Modal geöffnet');
+        } else {
+            console.error('Login-Modal Element nicht gefunden');
+        }
     }
 
     // Event Listener für initialen Login-Button
@@ -1627,33 +1646,42 @@ async function initApp() {
         initialLoginButton.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('Initialer Login-Button geklickt');
+            // Versuche zuerst die sync.js Funktion, dann Fallback
             if (typeof window.showLoginModal === 'function') {
                 window.showLoginModal();
             } else {
-                console.error('showLoginModal Funktion nicht verfügbar');
+                console.warn('window.showLoginModal nicht verfügbar, verwende Fallback');
+                openLoginModal();
             }
         });
         console.log('Initialer Login-Button Event Listener hinzugefügt');
+    } else {
+        console.error('Login-Button Element nicht gefunden!');
     }
 
     // Event Delegation für Login/Logout-Buttons (funktioniert auch wenn Buttons dynamisch erstellt werden)
     const userInfo = document.getElementById('userInfo');
     if (userInfo) {
         userInfo.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            console.log('UserInfo click event:', e.target);
 
             // Login-Button
             if (e.target.classList.contains('btn-login') || e.target.id === 'loginButton') {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Login-Button geklickt (Event Delegation)');
+                // Versuche zuerst die sync.js Funktion, dann Fallback
                 if (typeof window.showLoginModal === 'function') {
                     window.showLoginModal();
                 } else {
-                    console.error('showLoginModal Funktion nicht verfügbar');
+                    console.warn('window.showLoginModal nicht verfügbar, verwende Fallback');
+                    openLoginModal();
                 }
             }
             // Logout-Button
             if (e.target.classList.contains('btn-logout') || e.target.id === 'logoutButton') {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Logout-Button geklickt');
                 if (typeof window.logout === 'function') {
                     window.logout();
@@ -1663,6 +1691,8 @@ async function initApp() {
             }
         });
         console.log('Login/Logout Event Delegation hinzugefügt');
+    } else {
+        console.error('UserInfo Element nicht gefunden!');
     }
 
     // Sync initialisieren (mit Timeout, damit App nicht hängen bleibt)
