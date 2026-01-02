@@ -360,15 +360,34 @@
     <!-- Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+            // Lösche ALLE alten Caches beim Start
+            window.addEventListener('load', async () => {
+                try {
+                    const cacheNames = await caches.keys();
+                    console.log('Gefundene Caches:', cacheNames);
+                    for (const cacheName of cacheNames) {
+                        // Lösche alle alten Cache-Versionen (v1, v2, v3)
+                        if (cacheName !== 'krafttraining-v4') {
+                            console.log('Lösche alten Cache:', cacheName);
+                            await caches.delete(cacheName);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Fehler beim Löschen alter Caches:', error);
+                }
+
+                // Service Worker registrieren
+                navigator.serviceWorker.register('/service-worker.js?v=4')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
-                        // Prüfe auf Updates alle 60 Sekunden
+                        // Force update sofort
+                        registration.update();
+
+                        // Prüfe auf Updates alle 30 Sekunden
                         setInterval(() => {
                             registration.update();
-                        }, 60000);
+                        }, 30000);
 
                         // Wenn ein Update wartet, aktiviere es sofort
                         registration.addEventListener('updatefound', () => {

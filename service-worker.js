@@ -1,7 +1,5 @@
-const CACHE_NAME = 'krafttraining-v3';
+const CACHE_NAME = 'krafttraining-v4';
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/style.css',
   '/app.js',
   '/sync.js',
@@ -40,7 +38,7 @@ self.addEventListener('activate', event => {
   return self.clients.claim();
 });
 
-// Fetch - Network First für HTML/JS/CSS, Cache als Fallback
+// Fetch - Network First für JS/CSS, NIEMALS HTML cachen
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
@@ -55,12 +53,18 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // NETWORK FIRST Strategie für lokale App-Dateien
-  // Dies stellt sicher, dass immer die neueste Version geladen wird
+  // NIEMALS HTML-Dateien cachen - immer vom Server laden
+  if (event.request.mode === 'navigate' || event.request.destination === 'document' ||
+      url.pathname === '/' || url.pathname.endsWith('.html')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // NETWORK FIRST Strategie für JS/CSS/andere Dateien
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Valide Response vom Netzwerk - update Cache
+        // Valide Response vom Netzwerk - update Cache (nur für nicht-HTML Dateien)
         if (response && response.status === 200 && response.type === 'basic') {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then(cache => {
@@ -70,7 +74,7 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => {
-        // Netzwerk fehlgeschlagen - versuche Cache
+        // Netzwerk fehlgeschlagen - versuche Cache (nur für nicht-HTML Dateien)
         return caches.match(event.request).then(cachedResponse => {
           if (cachedResponse) {
             console.log('Serving from cache (offline):', event.request.url);
