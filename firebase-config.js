@@ -26,33 +26,57 @@ let auth = null;
 
 async function initFirebase() {
   try {
+    // Prüfe ob Firebase SDK geladen wurde
+    if (typeof firebase === 'undefined') {
+      console.error('Firebase SDK wurde nicht geladen. Bitte Internetverbindung prüfen.');
+      return false;
+    }
+
     // Prüfe ob Firebase konfiguriert ist
     if (firebaseConfig.apiKey === "DEIN_API_KEY") {
       console.warn('Firebase ist noch nicht konfiguriert. Siehe firebase-config.js');
       return false;
     }
 
-    // Initialisiere Firebase
-    const app = firebase.initializeApp(firebaseConfig);
+    console.log('Initialisiere Firebase...');
+
+    // Initialisiere Firebase (nur wenn noch nicht initialisiert)
+    if (!firebase.apps || firebase.apps.length === 0) {
+      const app = firebase.initializeApp(firebaseConfig);
+      console.log('Firebase App initialisiert');
+    } else {
+      console.log('Firebase App bereits initialisiert');
+    }
 
     // Initialisiere Firestore mit Offline-Persistenz
     db = firebase.firestore();
-    db.enablePersistence({ synchronizeTabs: true })
-      .catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn('Mehrere Tabs geöffnet, Persistenz nur im ersten Tab');
-        } else if (err.code === 'unimplemented') {
-          console.warn('Browser unterstützt keine Offline-Persistenz');
-        }
-      });
+
+    // Versuche Offline-Persistenz zu aktivieren
+    try {
+      await db.enablePersistence({ synchronizeTabs: true });
+      console.log('Offline-Persistenz aktiviert');
+    } catch (err) {
+      if (err.code === 'failed-precondition') {
+        console.warn('Mehrere Tabs geöffnet, Persistenz nur im ersten Tab');
+      } else if (err.code === 'unimplemented') {
+        console.warn('Browser unterstützt keine Offline-Persistenz');
+      } else {
+        console.warn('Persistenz-Fehler:', err);
+      }
+    }
 
     // Initialisiere Authentication
     auth = firebase.auth();
+    console.log('Firebase Auth initialisiert');
 
-    console.log('Firebase erfolgreich initialisiert');
+    // Exportiere db und auth global
+    window.db = db;
+    window.auth = auth;
+
+    console.log('✅ Firebase erfolgreich initialisiert');
     return true;
   } catch (error) {
-    console.error('Firebase Initialisierung fehlgeschlagen:', error);
+    console.error('❌ Firebase Initialisierung fehlgeschlagen:', error);
     return false;
   }
 }
@@ -60,3 +84,5 @@ async function initFirebase() {
 // Exportiere für globale Verwendung
 window.firebaseConfig = firebaseConfig;
 window.initFirebase = initFirebase;
+window.db = db;
+window.auth = auth;
