@@ -4,15 +4,24 @@ let currentUser = null;
 let syncInProgress = false;
 let lastSyncTime = null;
 
+// Referenzen zu Firebase (werden in initFirebase gesetzt)
+let db, auth;
+
 // Sync initialisieren
 async function initSync() {
   const firebaseReady = await initFirebase();
 
-  if (!firebaseReady) {
+  // Hole Firebase-Referenzen von window
+  db = window.db;
+  auth = window.auth;
+
+  if (!firebaseReady || !db || !auth) {
     console.log('Firebase nicht verfügbar - App läuft im Offline-Modus');
     updateSyncStatus('offline', 'Nur lokal (kein Cloud-Sync)');
     return false;
   }
+
+  console.log('✅ Firebase-Referenzen erfolgreich geladen (db:', !!db, ', auth:', !!auth, ')');
 
   // Auth State Observer
   auth.onAuthStateChanged(async (user) => {
