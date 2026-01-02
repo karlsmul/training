@@ -1562,7 +1562,6 @@ window.displayTrainings = displayTrainings;
 window.displayPersonalRecords = displayPersonalRecords;
 window.displayTrainingPlans = displayTrainingPlans;
 window.displayBodyWeightHistory = displayBodyWeightHistory;
-window.displayStats = displayStats;
 window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
 
