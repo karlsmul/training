@@ -1558,10 +1558,22 @@ async function initApp() {
         });
     }
 
-    // Sync initialisieren
+    // Sync initialisieren (mit Timeout, damit App nicht hängen bleibt)
     if (typeof initSync === 'function') {
-        await initSync();
+        try {
+            console.log('Starte Firebase-Synchronisation...');
+            const syncTimeout = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Sync-Timeout')), 10000)
+            );
+            await Promise.race([initSync(), syncTimeout]);
+            console.log('Firebase-Synchronisation abgeschlossen');
+        } catch (error) {
+            console.warn('Sync konnte nicht initialisiert werden:', error.message);
+            console.log('App läuft im Offline-Modus weiter');
+        }
     }
+
+    console.log('✅ App vollständig geladen und bereit!');
 }
 
 // App starten
