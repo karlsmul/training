@@ -691,17 +691,23 @@ async function loginWithEmail(email, password) {
       return;
     }
 
+    console.log('Versuche Anmeldung für:', email);
     await auth.signInWithEmailAndPassword(email, password);
-    showNotification('Erfolgreich angemeldet!');
+    console.log('Anmeldung erfolgreich!');
+    showNotification('✅ Erfolgreich angemeldet!');
     hideLoginModal();
   } catch (error) {
     console.error('Login-Fehler:', error);
     if (error.code === 'auth/user-not-found') {
-      showNotification('Benutzer nicht gefunden. Bitte registrieren.');
+      showNotification('❌ Benutzer nicht gefunden. Bitte registrieren.');
     } else if (error.code === 'auth/wrong-password') {
-      showNotification('Falsches Passwort');
+      showNotification('❌ Falsches Passwort');
+    } else if (error.code === 'auth/invalid-email') {
+      showNotification('❌ Ungültige E-Mail-Adresse');
+    } else if (error.code === 'auth/network-request-failed') {
+      showNotification('❌ Netzwerkfehler. Bitte Internetverbindung prüfen.');
     } else {
-      showNotification('Login fehlgeschlagen: ' + error.message);
+      showNotification('❌ Login fehlgeschlagen: ' + error.message);
     }
   }
 }
@@ -717,21 +723,25 @@ async function registerWithEmail(email, password) {
     }
 
     if (password.length < 6) {
-      showNotification('Passwort muss mindestens 6 Zeichen lang sein');
+      showNotification('❌ Passwort muss mindestens 6 Zeichen lang sein');
       return;
     }
 
+    console.log('Versuche Registrierung für:', email);
     await auth.createUserWithEmailAndPassword(email, password);
-    showNotification('Konto erstellt und angemeldet!');
+    console.log('Registrierung erfolgreich!');
+    showNotification('✅ Konto erstellt und angemeldet!');
     hideLoginModal();
   } catch (error) {
     console.error('Registrierungs-Fehler:', error);
     if (error.code === 'auth/email-already-in-use') {
-      showNotification('E-Mail bereits registriert. Bitte anmelden.');
+      showNotification('❌ E-Mail bereits registriert. Bitte anmelden.');
     } else if (error.code === 'auth/invalid-email') {
-      showNotification('Ungültige E-Mail-Adresse');
+      showNotification('❌ Ungültige E-Mail-Adresse');
+    } else if (error.code === 'auth/network-request-failed') {
+      showNotification('❌ Netzwerkfehler. Bitte Internetverbindung prüfen.');
     } else {
-      showNotification('Registrierung fehlgeschlagen: ' + error.message);
+      showNotification('❌ Registrierung fehlgeschlagen: ' + error.message);
     }
   }
 }

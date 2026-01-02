@@ -1487,22 +1487,30 @@ document.head.appendChild(style);
 // LOGIN HANDLERS (für sync.js)
 // ========================================
 
-function handleEmailLogin() {
+async function handleEmailLogin() {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-    loginWithEmail(email, password);
-    hideLoginModal();
-}
 
-function handleEmailRegister() {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
     if (!email || !password) {
         showNotification('Bitte E-Mail und Passwort eingeben');
         return;
     }
-    registerWithEmail(email, password);
-    hideLoginModal();
+
+    // Modal bleibt offen bis Login erfolgreich ist
+    await loginWithEmail(email, password);
+}
+
+async function handleEmailRegister() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        showNotification('Bitte E-Mail und Passwort eingeben');
+        return;
+    }
+
+    // Modal bleibt offen bis Registrierung erfolgreich ist
+    await registerWithEmail(email, password);
 }
 
 window.handleEmailLogin = handleEmailLogin;
@@ -1532,6 +1540,23 @@ async function initApp() {
     displayExerciseList();
     loadPersonalInfo();
     updateStatistics();
+
+    // Login Event Listener hinzufügen
+    const emailLoginForm = document.getElementById('emailLoginForm');
+    if (emailLoginForm) {
+        emailLoginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleEmailLogin();
+        });
+    }
+
+    const registerLink = document.getElementById('registerLink');
+    if (registerLink) {
+        registerLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleEmailRegister();
+        });
+    }
 
     // Sync initialisieren
     if (typeof initSync === 'function') {
