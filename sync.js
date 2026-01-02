@@ -157,6 +157,8 @@ async function syncFromCloud() {
 
     // Merge Personal Info und Exercises
     let hasLocalData = false;
+    let hasLocalExercises = exercises.length > 0;
+
     if (userDoc.exists) {
       const cloudPersonalInfo = userDoc.data();
       if (cloudPersonalInfo.age !== undefined) {
@@ -165,20 +167,28 @@ async function syncFromCloud() {
       if (cloudPersonalInfo.height !== undefined) {
         personalInfo.height = cloudPersonalInfo.height;
       }
-      if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises)) {
-        // Merge lokale und Cloud-Übungen
+
+      // Merge Übungen: Lokale Übungen haben Priorität und werden IMMER behalten
+      if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises) && cloudPersonalInfo.exercises.length > 0) {
+        // Nur mergen wenn Cloud tatsächlich Übungen hat
         const mergedExercises = [...new Set([...exercises, ...cloudPersonalInfo.exercises])];
         exercises = mergedExercises.sort();
+        console.log('Übungen gemerged:', exercises.length, 'Übungen');
+      } else if (hasLocalExercises) {
+        // Cloud hat keine Übungen, aber wir haben lokale - behalte die lokalen
+        console.log('Keine Cloud-Übungen gefunden, behalte lokale:', exercises.length, 'Übungen');
       }
+
       localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
       localStorage.setItem('exercises', JSON.stringify(exercises));
     } else {
       hasLocalData = true;
     }
 
-    // Upload Personal Info und Exercises zur Cloud, wenn noch nicht vorhanden
-    if (hasLocalData || (personalInfo.age || personalInfo.height || exercises.length > 0)) {
+    // IMMER zur Cloud hochladen wenn wir lokale Übungen haben
+    if (hasLocalExercises || hasLocalData || personalInfo.age || personalInfo.height) {
       await syncPersonalInfoToCloud(personalInfo);
+      console.log('Lokale Daten zur Cloud hochgeladen');
     }
 
     displayTrainings();
@@ -799,7 +809,7 @@ function showUserInfo(user) {
     <div class="user-profile">
       ${user.photoURL ? `<img src="${user.photoURL}" alt="Profil" class="user-avatar">` : ''}
       <span class="user-name">${user.email || user.displayName}</span>
-      <button onclick="logout()" class="btn-logout">Abmelden</button>
+      <button class="btn-logout" id="logoutButton">Abmelden</button>
     </div>
   `;
   userInfoElement.style.display = 'flex';
@@ -819,7 +829,7 @@ function hideUserInfo() {
     `;
   } else {
     userInfoElement.innerHTML = `
-      <button onclick="showLoginModal()" class="btn-login">Anmelden für Cloud-Sync</button>
+      <button class="btn-login" id="loginButton">Anmelden für Cloud-Sync</button>
     `;
   }
 }

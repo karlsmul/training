@@ -1558,6 +1558,32 @@ async function initApp() {
         });
     }
 
+    // Event Delegation für Login/Logout-Buttons (funktioniert auch wenn Buttons dynamisch erstellt werden)
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo) {
+        userInfo.addEventListener('click', (e) => {
+            // Login-Button
+            if (e.target.classList.contains('btn-login') || e.target.id === 'loginButton') {
+                console.log('Login-Button geklickt');
+                if (typeof showLoginModal === 'function') {
+                    showLoginModal();
+                } else {
+                    console.error('showLoginModal Funktion nicht verfügbar');
+                }
+            }
+            // Logout-Button
+            if (e.target.classList.contains('btn-logout') || e.target.id === 'logoutButton') {
+                console.log('Logout-Button geklickt');
+                if (typeof logout === 'function') {
+                    logout();
+                } else {
+                    console.error('logout Funktion nicht verfügbar');
+                }
+            }
+        });
+        console.log('Login/Logout Event Listener hinzugefügt');
+    }
+
     // Sync initialisieren (mit Timeout, damit App nicht hängen bleibt)
     if (typeof initSync === 'function') {
         try {
