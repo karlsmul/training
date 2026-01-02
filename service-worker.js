@@ -1,4 +1,4 @@
-const CACHE_NAME = 'krafttraining-v7';
+const CACHE_NAME = 'krafttraining-v8';
 const urlsToCache = [
   '/style.css',
   '/app.js',

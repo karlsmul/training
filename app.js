@@ -966,10 +966,13 @@ function displayBodyWeightHistory() {
             year: 'numeric'
         });
 
+        // Formatiere Gewicht mit zwei Nachkommastellen und Komma als Trennzeichen
+        const formattedWeight = entry.weight.toFixed(2).replace('.', ',');
+
         return `
             <div class="body-weight-entry">
                 <span class="date">${formattedDate}</span>
-                <span class="weight">${entry.weight} kg</span>
+                <span class="weight">${formattedWeight} kg</span>
                 <button class="delete-btn" onclick="deleteBodyWeight(${entry.id})">×</button>
             </div>
         `;
@@ -1170,11 +1173,26 @@ function updateBodyWeightChart() {
             plugins: {
                 legend: {
                     display: true
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            // Formatiere Gewicht mit zwei Nachkommastellen und Komma
+                            const weight = context.parsed.y.toFixed(2).replace('.', ',');
+                            return 'Körpergewicht: ' + weight + ' kg';
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: false
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            // Formatiere Y-Achsen-Werte mit zwei Nachkommastellen und Komma
+                            return value.toFixed(2).replace('.', ',') + ' kg';
+                        }
+                    }
                 }
             }
         }
