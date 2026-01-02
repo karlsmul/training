@@ -594,15 +594,21 @@ function startRealtimeSync() {
           updated = true;
         }
 
-        if (data.exercises && Array.isArray(data.exercises)) {
+        if (data.exercises && Array.isArray(data.exercises) && data.exercises.length > 0) {
+          // Merge Übungen: Lokale Übungen haben Priorität
+          const mergedExercises = [...new Set([...exercises, ...data.exercises])];
+          const sortedExercises = mergedExercises.sort();
+
           const currentExercises = JSON.stringify(exercises);
-          const newExercises = JSON.stringify(data.exercises);
+          const newExercises = JSON.stringify(sortedExercises);
+
           if (currentExercises !== newExercises) {
-            exercises = data.exercises;
+            exercises = sortedExercises;
             localStorage.setItem('exercises', JSON.stringify(exercises));
             populateExerciseDropdown();
             displayExerciseList();
             updated = true;
+            console.log('Übungen aktualisiert durch Realtime-Sync:', exercises.length, 'Übungen');
           }
         }
 
