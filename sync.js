@@ -826,16 +826,20 @@ function hideUserInfo() {
 
 // Login-Modal anzeigen
 function showLoginModal() {
-  // Prüfe ob Firebase konfiguriert ist
-  if (!auth) {
-    showNotification('⚠️ Firebase noch nicht konfiguriert! Siehe FIREBASE_SETUP.md für Anleitung');
-    console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
-    return;
-  }
+  console.log('Login-Modal wird geöffnet...');
 
   const modal = document.getElementById('loginModal');
   if (modal) {
     modal.style.display = 'flex';
+    console.log('Login-Modal erfolgreich geöffnet');
+  } else {
+    console.error('Login-Modal Element nicht gefunden!');
+  }
+
+  // Warnung anzeigen wenn Firebase nicht verfügbar ist
+  if (!auth) {
+    console.warn('Firebase Auth ist nicht verfügbar');
+    // Aber Modal trotzdem öffnen - die Fehlermeldung kommt beim Login-Versuch
   }
 }
 
