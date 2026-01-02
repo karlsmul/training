@@ -55,8 +55,10 @@ function migrateOldData() {
 
 // Trainingseinträge aus localStorage laden (mit Migration)
 let trainings = migrateOldData();
-let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
-let bodyWeights = JSON.parse(localStorage.getItem('bodyWeights')) || [];
+let trainingPlans = (JSON.parse(localStorage.getItem('trainingPlans')) || []).filter(plan =>
+    plan.weight6Reps || plan.weight10Reps || plan.weight3Reps
+);
+let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
 let exercises = JSON.parse(localStorage.getItem('exercises')) || [];
@@ -802,14 +804,24 @@ planForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const exercise = document.getElementById('planExercise').value;
+    const weight6Reps = parseFloat(document.getElementById('weight6Reps').value) || null;
+    const weight10Reps = parseFloat(document.getElementById('weight10Reps').value) || null;
+    const weight3Reps = parseFloat(document.getElementById('weight3Reps').value) || null;
+
+    // Validierung: mindestens ein Gewicht muss angegeben sein
+    if (!weight6Reps && !weight10Reps && !weight3Reps) {
+        showNotification('⚠️ Bitte mindestens ein Gewicht eingeben!');
+        return;
+    }
+
     const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
 
     const plan = {
         id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
         exercise: exercise,
-        weight6Reps: parseFloat(document.getElementById('weight6Reps').value),
-        weight10Reps: parseFloat(document.getElementById('weight10Reps').value),
-        weight3Reps: parseFloat(document.getElementById('weight3Reps').value)
+        weight6Reps: weight6Reps,
+        weight10Reps: weight10Reps,
+        weight3Reps: weight3Reps
     };
 
     if (existingPlanIndex !== -1) {
@@ -834,7 +846,12 @@ planForm.addEventListener('submit', async function(e) {
 });
 
 function displayTrainingPlans() {
-    if (trainingPlans.length === 0) {
+    // Filtere ungültige Pläne (ohne jegliche Gewichte)
+    const validPlans = trainingPlans.filter(plan =>
+        plan.weight6Reps || plan.weight10Reps || plan.weight3Reps
+    );
+
+    if (validPlans.length === 0) {
         planList.innerHTML = `
             <div class="empty-state">
                 <p>Noch keine Gewichte gespeichert.</p>
@@ -844,22 +861,22 @@ function displayTrainingPlans() {
         return;
     }
 
-    planList.innerHTML = trainingPlans.map(plan => `
+    planList.innerHTML = validPlans.map(plan => `
         <div class="plan-item">
             <div class="plan-info">
                 <h3>${plan.exercise}</h3>
                 <div class="weight-reference-table">
                     <div class="weight-ref-row">
                         <div class="weight-ref-label">6 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight6Reps || 0} kg</div>
+                        <div class="weight-ref-value">${plan.weight6Reps ? plan.weight6Reps + ' kg' : '-'}</div>
                     </div>
                     <div class="weight-ref-row">
                         <div class="weight-ref-label">10 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight10Reps || 0} kg</div>
+                        <div class="weight-ref-value">${plan.weight10Reps ? plan.weight10Reps + ' kg' : '-'}</div>
                     </div>
                     <div class="weight-ref-row">
                         <div class="weight-ref-label">3 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight3Reps || 0} kg</div>
+                        <div class="weight-ref-value">${plan.weight3Reps ? plan.weight3Reps + ' kg' : '-'}</div>
                     </div>
                 </div>
             </div>

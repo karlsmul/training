@@ -646,14 +646,18 @@ function mergeBorgValues(local, cloud) {
 function mergePlans(local, cloud) {
   const merged = new Map();
 
-  // Lokale Pläne hinzufügen
+  // Lokale Pläne hinzufügen (nur gültige mit mindestens einem Gewicht)
   local.forEach(plan => {
-    merged.set(plan.id, plan);
+    if (plan.weight6Reps || plan.weight10Reps || plan.weight3Reps) {
+      merged.set(plan.id, plan);
+    }
   });
 
-  // Cloud-Pläne überschreiben lokale (Cloud hat Priorität)
+  // Cloud-Pläne überschreiben lokale (Cloud hat Priorität, nur gültige)
   cloud.forEach(plan => {
-    merged.set(plan.id, plan);
+    if (plan.weight6Reps || plan.weight10Reps || plan.weight3Reps) {
+      merged.set(plan.id, plan);
+    }
   });
 
   return Array.from(merged.values());
