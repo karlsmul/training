@@ -9,14 +9,24 @@ let db, auth;
 
 // Sync initialisieren
 async function initSync() {
+  console.log('initSync gestartet...');
+  console.log('initFirebase Funktion verfügbar:', typeof window.initFirebase === 'function');
+
   const firebaseReady = await initFirebase();
+  console.log('Firebase initialisiert:', firebaseReady);
 
   // Hole Firebase-Referenzen von window
   db = window.db;
   auth = window.auth;
 
+  console.log('db von window:', !!db);
+  console.log('auth von window:', !!auth);
+
   if (!firebaseReady || !db || !auth) {
     console.warn('Firebase nicht verfügbar - App läuft nur mit lokaler Speicherung');
+    console.warn('firebaseReady:', firebaseReady);
+    console.warn('db:', !!db);
+    console.warn('auth:', !!auth);
     updateSyncStatus('not_logged_in', 'Cloud-Sync nicht verfügbar');
     // Trotzdem weiterlaufen - App funktioniert offline
     return false;
@@ -683,17 +693,26 @@ function mergeBodyWeights(local, cloud) {
 
 // Login mit Google
 async function loginWithGoogle() {
+  console.log('loginWithGoogle aufgerufen');
+  console.log('auth verfügbar:', !!auth);
+  console.log('firebase verfügbar:', typeof firebase !== 'undefined');
+
   try {
     // Prüfe ob Firebase konfiguriert ist
     if (!auth) {
-      showNotification('⚠️ Firebase noch nicht konfiguriert! Bitte siehe FIREBASE_SETUP.md');
-      console.error('Firebase ist nicht initialisiert. Bitte firebase-config.js konfigurieren.');
+      const errorMsg = '⚠️ Firebase Authentication nicht verfügbar. Bitte warten oder Seite neu laden.';
+      showNotification(errorMsg);
+      console.error('auth ist null oder undefined');
+      console.error('window.auth:', window.auth);
+      console.error('Firebase geladen:', typeof firebase !== 'undefined');
       return;
     }
 
+    console.log('Starte Google Login...');
     const provider = new firebase.auth.GoogleAuthProvider();
-    await auth.signInWithPopup(provider);
-    showNotification('Erfolgreich angemeldet!');
+    const result = await auth.signInWithPopup(provider);
+    console.log('Login erfolgreich:', result.user.email);
+    showNotification('✅ Erfolgreich angemeldet!');
     hideLoginModal();
   } catch (error) {
     console.error('Login-Fehler:', error);
