@@ -166,9 +166,14 @@ async function syncFromCloud() {
       .doc(currentUser.uid)
       .get();
 
+    // WICHTIG: Lade Übungen DIREKT aus localStorage (nicht aus globaler Variable)
+    // Dies verhindert Race Conditions beim App-Start
+    const localExercises = JSON.parse(localStorage.getItem('exercises')) || [];
+    console.log('Lokale Übungen aus localStorage geladen:', localExercises.length);
+
     // Merge Personal Info und Exercises
     let hasLocalData = false;
-    let hasLocalExercises = exercises.length > 0;
+    let hasLocalExercises = localExercises.length > 0;
 
     if (userDoc.exists) {
       const cloudPersonalInfo = userDoc.data();
@@ -179,27 +184,35 @@ async function syncFromCloud() {
         personalInfo.height = cloudPersonalInfo.height;
       }
 
-      // Merge Übungen: Lokale Übungen haben Priorität und werden IMMER behalten
+      // Merge Übungen: Lokale Übungen haben ABSOLUTE Priorität
       if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises) && cloudPersonalInfo.exercises.length > 0) {
-        // Nur mergen wenn Cloud tatsächlich Übungen hat
-        const mergedExercises = [...new Set([...exercises, ...cloudPersonalInfo.exercises])];
+        // Merge lokale UND Cloud-Übungen (keine Duplikate)
+        const mergedExercises = [...new Set([...localExercises, ...cloudPersonalInfo.exercises])];
         exercises = mergedExercises.sort();
-        console.log('Übungen gemerged:', exercises.length, 'Übungen');
+        console.log('✅ Übungen gemerged:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', cloudPersonalInfo.exercises.length, 'Cloud)');
       } else if (hasLocalExercises) {
         // Cloud hat keine Übungen, aber wir haben lokale - behalte die lokalen
-        console.log('Keine Cloud-Übungen gefunden, behalte lokale:', exercises.length, 'Übungen');
+        exercises = [...localExercises];
+        console.log('✅ Keine Cloud-Übungen, behalte lokale:', exercises.length, 'Übungen');
+      } else {
+        // Weder lokal noch Cloud haben Übungen
+        exercises = [];
+        console.log('⚠️ Keine Übungen vorhanden (weder lokal noch Cloud)');
       }
 
       localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
       localStorage.setItem('exercises', JSON.stringify(exercises));
     } else {
+      // Kein User-Dokument in Cloud - behalte lokale Übungen
+      exercises = [...localExercises];
       hasLocalData = true;
+      console.log('✅ Kein Cloud-Dokument, behalte lokale Übungen:', exercises.length);
     }
 
     // IMMER zur Cloud hochladen wenn wir lokale Übungen haben
     if (hasLocalExercises || hasLocalData || personalInfo.age || personalInfo.height) {
       await syncPersonalInfoToCloud(personalInfo);
-      console.log('Lokale Daten zur Cloud hochgeladen');
+      console.log('📤 Lokale Daten zur Cloud hochgeladen (inkl.', exercises.length, 'Übungen)');
     }
 
     displayTrainings();
@@ -595,11 +608,14 @@ function startRealtimeSync() {
         }
 
         if (data.exercises && Array.isArray(data.exercises) && data.exercises.length > 0) {
-          // Merge Übungen: Lokale Übungen haben Priorität
-          const mergedExercises = [...new Set([...exercises, ...data.exercises])];
+          // WICHTIG: Lade Übungen DIREKT aus localStorage (verhindert Race Conditions)
+          const localExercises = JSON.parse(localStorage.getItem('exercises')) || [];
+
+          // Merge Übungen: Lokale Übungen haben ABSOLUTE Priorität
+          const mergedExercises = [...new Set([...localExercises, ...data.exercises])];
           const sortedExercises = mergedExercises.sort();
 
-          const currentExercises = JSON.stringify(exercises);
+          const currentExercises = JSON.stringify(localExercises);
           const newExercises = JSON.stringify(sortedExercises);
 
           if (currentExercises !== newExercises) {
@@ -608,7 +624,7 @@ function startRealtimeSync() {
             populateExerciseDropdown();
             displayExerciseList();
             updated = true;
-            console.log('Übungen aktualisiert durch Realtime-Sync:', exercises.length, 'Übungen');
+            console.log('✅ Übungen aktualisiert durch Realtime-Sync:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', data.exercises.length, 'Cloud)');
           }
         }
 
