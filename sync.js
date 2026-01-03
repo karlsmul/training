@@ -219,7 +219,6 @@ async function syncFromCloud() {
     displayPersonalRecords();
     displayTrainingPlans();
     displayBodyWeightHistory();
-    displayStats();
     populateExerciseDropdown();
     displayExerciseList();
 
@@ -579,7 +578,6 @@ function startRealtimeSync() {
 
       localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
       displayBodyWeightHistory();
-      displayStats();
 
       lastSyncTime = new Date();
       updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -630,7 +628,6 @@ function startRealtimeSync() {
 
         if (updated) {
           localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
-          displayStats();
 
           lastSyncTime = new Date();
           updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
