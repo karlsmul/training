@@ -86,7 +86,7 @@
 
                     <div class="form-group">
                         <label for="sets">Anzahl Sätze:</label>
-                        <input type="number" id="sets" min="1" max="10" value="3" required>
+                        <input type="number" id="sets" min="1" max="10" value="4" required>
                     </div>
 
                     <!-- Wiederholungen pro Satz -->
@@ -366,8 +366,8 @@
                     const cacheNames = await caches.keys();
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
-                        // Lösche alle alten Cache-Versionen (v1-v8)
-                        if (cacheName !== 'krafttraining-v9') {
+                        // Lösche alle alten Cache-Versionen (v1-v9)
+                        if (cacheName !== 'krafttraining-v10') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -377,7 +377,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=9')
+                navigator.serviceWorker.register('/service-worker.js?v=10')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
