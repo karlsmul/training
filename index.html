@@ -351,11 +351,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=11"></script>
-    <script src="sync.js?v=11"></script>
+    <script src="firebase-config.js?v=12"></script>
+    <script src="sync.js?v=12"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=11"></script>
+    <script src="app.js?v=12"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -366,8 +366,8 @@
                     const cacheNames = await caches.keys();
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
-                        // Lösche alle alten Cache-Versionen (v1-v10)
-                        if (cacheName !== 'krafttraining-v11') {
+                        // Lösche alle alten Cache-Versionen (v1-v11)
+                        if (cacheName !== 'krafttraining-v12') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -377,7 +377,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=11')
+                navigator.serviceWorker.register('/service-worker.js?v=12')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

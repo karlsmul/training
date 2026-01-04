@@ -436,6 +436,23 @@ async function deleteDailyBorgFromCloud(date) {
   }
 }
 
+// Hilfsfunktion: Prüfen ob Benutzer gerade tippt
+function isUserTyping() {
+  const activeElement = document.activeElement;
+  if (!activeElement) return false;
+
+  const tagName = activeElement.tagName.toLowerCase();
+  const type = activeElement.type ? activeElement.type.toLowerCase() : '';
+
+  // Prüfe ob ein Input, Textarea oder contenteditable Feld fokussiert ist
+  return (
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    activeElement.isContentEditable ||
+    (tagName === 'select' && activeElement.classList.contains('open'))
+  );
+}
+
 // Echtzeit-Synchronisation starten
 function startRealtimeSync() {
   if (!syncEnabled || !currentUser) return;
@@ -469,8 +486,14 @@ function startRealtimeSync() {
       });
 
       localStorage.setItem('trainings', JSON.stringify(trainings));
-      displayTrainings();
-      displayPersonalRecords();
+
+      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
+      if (!isUserTyping()) {
+        displayTrainings();
+        displayPersonalRecords();
+      } else {
+        console.log('⏸️ UI-Update übersprungen - Benutzer tippt gerade');
+      }
 
       lastSyncTime = new Date();
       updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -505,7 +528,13 @@ function startRealtimeSync() {
       });
 
       localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
-      displayTrainings(); // Borg-Werte werden in den Date-Blocks angezeigt
+
+      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
+      if (!isUserTyping()) {
+        displayTrainings(); // Borg-Werte werden in den Date-Blocks angezeigt
+      } else {
+        console.log('⏸️ Borg UI-Update übersprungen - Benutzer tippt gerade');
+      }
 
       lastSyncTime = new Date();
       updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -541,7 +570,13 @@ function startRealtimeSync() {
       });
 
       localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
-      displayTrainingPlans();
+
+      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
+      if (!isUserTyping()) {
+        displayTrainingPlans();
+      } else {
+        console.log('⏸️ Plan UI-Update übersprungen - Benutzer tippt gerade');
+      }
 
       lastSyncTime = new Date();
       updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -577,7 +612,13 @@ function startRealtimeSync() {
       });
 
       localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
-      displayBodyWeightHistory();
+
+      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
+      if (!isUserTyping()) {
+        displayBodyWeightHistory();
+      } else {
+        console.log('⏸️ Body Weight UI-Update übersprungen - Benutzer tippt gerade');
+      }
 
       lastSyncTime = new Date();
       updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -619,8 +660,15 @@ function startRealtimeSync() {
           if (currentExercises !== newExercises) {
             exercises = sortedExercises;
             localStorage.setItem('exercises', JSON.stringify(exercises));
-            populateExerciseDropdown();
-            displayExerciseList();
+
+            // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
+            if (!isUserTyping()) {
+              populateExerciseDropdown();
+              displayExerciseList();
+            } else {
+              console.log('⏸️ Exercises UI-Update übersprungen - Benutzer tippt gerade');
+            }
+
             updated = true;
             console.log('✅ Übungen aktualisiert durch Realtime-Sync:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', data.exercises.length, 'Cloud)');
           }
