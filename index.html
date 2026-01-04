@@ -38,6 +38,14 @@
                 <span id="syncStatus" class="sync-status not_logged_in">Anmelden für Cloud-Sync</span>
             </div>
 
+            <!-- Manual Update Button -->
+            <div class="update-container">
+                <button id="updateButton" class="btn-update" title="Ansicht aktualisieren">
+                    🔄 Aktualisieren
+                </button>
+                <span id="updateIndicator" class="update-indicator" style="display: none;">Neue Daten verfügbar</span>
+            </div>
+
             <!-- User Info / Login Button -->
             <div id="userInfo" class="user-info">
                 <button class="btn-login" id="loginButton">Anmelden für Cloud-Sync</button>
@@ -351,11 +359,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=13"></script>
-    <script src="sync.js?v=13"></script>
+    <script src="firebase-config.js?v=14"></script>
+    <script src="sync.js?v=14"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -366,8 +374,8 @@
                     const cacheNames = await caches.keys();
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
-                        // Lösche alle alten Cache-Versionen (v1-v12)
-                        if (cacheName !== 'krafttraining-v13') {
+                        // Lösche alle alten Cache-Versionen (v1-v13)
+                        if (cacheName !== 'krafttraining-v14') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -377,7 +385,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=13')
+                navigator.serviceWorker.register('/service-worker.js?v=14')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

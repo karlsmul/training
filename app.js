@@ -182,36 +182,6 @@ function generateRepsInputs() {
 
         repsInputsContainer.appendChild(repInputGroup);
     }
-
-    // Event-Listener für die generierten Inputs hinzufügen
-    addFormInteractionTracking();
-}
-
-// Tracking für Formular-Interaktionen
-function addFormInteractionTracking() {
-    // Track alle Input-Felder im Trainingsformular
-    const formInputs = form.querySelectorAll('input, select, textarea');
-    formInputs.forEach(input => {
-        // Entferne alte Listener (falls vorhanden)
-        input.removeEventListener('focus', trackFormInteractionIfAvailable);
-        input.removeEventListener('input', trackFormInteractionIfAvailable);
-        // Füge neue Listener hinzu
-        input.addEventListener('focus', trackFormInteractionIfAvailable);
-        input.addEventListener('input', trackFormInteractionIfAvailable);
-    });
-
-    // Speziell für die dynamisch generierten reps/weight inputs
-    const repsInputs = repsInputsContainer.querySelectorAll('input');
-    repsInputs.forEach(input => {
-        input.addEventListener('focus', trackFormInteractionIfAvailable);
-        input.addEventListener('input', trackFormInteractionIfAvailable);
-    });
-}
-
-function trackFormInteractionIfAvailable() {
-    if (typeof window.trackFormInteraction === 'function') {
-        window.trackFormInteraction();
-    }
 }
 
 // Initial generieren
@@ -1704,6 +1674,28 @@ async function initApp() {
         console.log('Initialer Login-Button Event Listener hinzugefügt');
     } else {
         console.error('Login-Button Element nicht gefunden!');
+    }
+
+    // Event Listener für Manual Update Button
+    const updateButton = document.getElementById('updateButton');
+    if (updateButton) {
+        updateButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🔄 Update-Button geklickt');
+            if (typeof window.manualUpdateUI === 'function') {
+                window.manualUpdateUI();
+            } else {
+                console.warn('manualUpdateUI Funktion nicht verfügbar');
+                // Fallback: Update UI direkt
+                displayTrainings();
+                displayPersonalRecords();
+                displayTrainingPlans();
+                displayBodyWeightHistory();
+                populateExerciseDropdown();
+                displayExerciseList();
+            }
+        });
+        console.log('Update-Button Event Listener hinzugefügt');
     }
 
     // Event Delegation für Login/Logout-Buttons (funktioniert auch wenn Buttons dynamisch erstellt werden)

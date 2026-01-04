@@ -436,50 +436,50 @@ async function deleteDailyBorgFromCloud(date) {
   }
 }
 
-// Tracking ob Benutzer gerade im Formular arbeitet
-let userInteractionTimestamp = 0;
-const INTERACTION_TIMEOUT = 5000; // 5 Sekunden nach letzter Interaktion
+// Tracking ob neue Daten verfügbar sind
+let hasNewUpdates = false;
 
-// Hilfsfunktion: Prüfen ob Benutzer gerade tippt oder kürzlich im Formular war
-function isUserTyping() {
-  const now = Date.now();
-  const timeSinceInteraction = now - userInteractionTimestamp;
+// Neue Daten verfügbar markieren
+function markUpdatesAvailable() {
+  hasNewUpdates = true;
+  const updateButton = document.getElementById('updateButton');
+  const updateIndicator = document.getElementById('updateIndicator');
 
-  // Wenn in den letzten 5 Sekunden eine Interaktion war, blockiere UI-Updates
-  if (timeSinceInteraction < INTERACTION_TIMEOUT) {
-    console.log('🔒 Benutzer war vor', Math.round(timeSinceInteraction / 1000), 'Sekunden aktiv - UI-Update blockiert');
-    return true;
+  if (updateButton) {
+    updateButton.classList.add('has-updates');
+  }
+  if (updateIndicator) {
+    updateIndicator.style.display = 'block';
   }
 
-  const activeElement = document.activeElement;
-  if (!activeElement) return false;
-
-  const tagName = activeElement.tagName.toLowerCase();
-  const type = activeElement.type ? activeElement.type.toLowerCase() : '';
-  const id = activeElement.id || '';
-
-  // Prüfe ob ein Input, Textarea oder contenteditable Feld fokussiert ist
-  const isTyping = (
-    tagName === 'input' ||
-    tagName === 'textarea' ||
-    activeElement.isContentEditable ||
-    (tagName === 'select' && activeElement.classList.contains('open')) ||
-    id.startsWith('rep') ||  // Wiederholungs-Inputs (rep1, rep2, ...)
-    id.startsWith('weight')  // Gewichts-Inputs (weight1, weight2, ...)
-  );
-
-  if (isTyping) {
-    console.log('🔒 Benutzer tippt in:', tagName, 'ID:', id, 'Type:', type);
-    userInteractionTimestamp = now; // Update timestamp
-  }
-
-  return isTyping;
+  console.log('📥 Neue Daten von Cloud verfügbar - Klicke "Aktualisieren" um zu laden');
 }
 
-// Tracking-Funktion für Formular-Interaktionen
-function trackFormInteraction() {
-  userInteractionTimestamp = Date.now();
-  console.log('📝 Formular-Interaktion registriert');
+// Manuelle UI-Aktualisierung
+function manualUpdateUI() {
+  console.log('🔄 Manuelles UI-Update gestartet...');
+
+  // Update alle UI-Elemente
+  displayTrainings();
+  displayPersonalRecords();
+  displayTrainingPlans();
+  displayBodyWeightHistory();
+  populateExerciseDropdown();
+  displayExerciseList();
+
+  // Reset update indicator
+  hasNewUpdates = false;
+  const updateButton = document.getElementById('updateButton');
+  const updateIndicator = document.getElementById('updateIndicator');
+
+  if (updateButton) {
+    updateButton.classList.remove('has-updates');
+  }
+  if (updateIndicator) {
+    updateIndicator.style.display = 'none';
+  }
+
+  console.log('✅ UI aktualisiert!');
 }
 
 // Echtzeit-Synchronisation starten
@@ -492,6 +492,8 @@ function startRealtimeSync() {
     .collection('trainings')
     .onSnapshot((snapshot) => {
       if (syncInProgress) return; // Verhindere Loop während Initial-Sync
+
+      let hasChanges = false;
 
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
@@ -507,21 +509,18 @@ function startRealtimeSync() {
           } else {
             trainings.push(training);
           }
+          hasChanges = true;
         }
 
         if (change.type === 'removed') {
           trainings = trainings.filter(t => t.id !== id);
+          hasChanges = true;
         }
       });
 
-      localStorage.setItem('trainings', JSON.stringify(trainings));
-
-      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
-      if (!isUserTyping()) {
-        displayTrainings();
-        displayPersonalRecords();
-      } else {
-        console.log('⏸️ UI-Update übersprungen - Benutzer tippt gerade');
+      if (hasChanges) {
+        localStorage.setItem('trainings', JSON.stringify(trainings));
+        markUpdatesAvailable(); // Markiere dass Updates verfügbar sind
       }
 
       lastSyncTime = new Date();
@@ -538,6 +537,8 @@ function startRealtimeSync() {
     .onSnapshot((snapshot) => {
       if (syncInProgress) return;
 
+      let hasChanges = false;
+
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
 
@@ -549,20 +550,18 @@ function startRealtimeSync() {
           } else {
             dailyBorgValues.push(data);
           }
+          hasChanges = true;
         }
 
         if (change.type === 'removed') {
           dailyBorgValues = dailyBorgValues.filter(b => b.date !== data.date);
+          hasChanges = true;
         }
       });
 
-      localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
-
-      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
-      if (!isUserTyping()) {
-        displayTrainings(); // Borg-Werte werden in den Date-Blocks angezeigt
-      } else {
-        console.log('⏸️ Borg UI-Update übersprungen - Benutzer tippt gerade');
+      if (hasChanges) {
+        localStorage.setItem('dailyBorgValues', JSON.stringify(dailyBorgValues));
+        markUpdatesAvailable();
       }
 
       lastSyncTime = new Date();
@@ -578,6 +577,8 @@ function startRealtimeSync() {
     .onSnapshot((snapshot) => {
       if (syncInProgress) return;
 
+      let hasChanges = false;
+
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
         const id = parseInt(change.doc.id);
@@ -591,20 +592,18 @@ function startRealtimeSync() {
           } else {
             trainingPlans.push(plan);
           }
+          hasChanges = true;
         }
 
         if (change.type === 'removed') {
           trainingPlans = trainingPlans.filter(p => p.id !== id);
+          hasChanges = true;
         }
       });
 
-      localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
-
-      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
-      if (!isUserTyping()) {
-        displayTrainingPlans();
-      } else {
-        console.log('⏸️ Plan UI-Update übersprungen - Benutzer tippt gerade');
+      if (hasChanges) {
+        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+        markUpdatesAvailable();
       }
 
       lastSyncTime = new Date();
@@ -620,6 +619,8 @@ function startRealtimeSync() {
     .onSnapshot((snapshot) => {
       if (syncInProgress) return;
 
+      let hasChanges = false;
+
       snapshot.docChanges().forEach((change) => {
         const data = change.doc.data();
         const id = parseInt(change.doc.id);
@@ -633,20 +634,18 @@ function startRealtimeSync() {
           } else {
             bodyWeights.push(weight);
           }
+          hasChanges = true;
         }
 
         if (change.type === 'removed') {
           bodyWeights = bodyWeights.filter(w => w.id !== id);
+          hasChanges = true;
         }
       });
 
-      localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
-
-      // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
-      if (!isUserTyping()) {
-        displayBodyWeightHistory();
-      } else {
-        console.log('⏸️ Body Weight UI-Update übersprungen - Benutzer tippt gerade');
+      if (hasChanges) {
+        localStorage.setItem('bodyWeights', JSON.stringify(bodyWeights));
+        markUpdatesAvailable();
       }
 
       lastSyncTime = new Date();
@@ -689,15 +688,6 @@ function startRealtimeSync() {
           if (currentExercises !== newExercises) {
             exercises = sortedExercises;
             localStorage.setItem('exercises', JSON.stringify(exercises));
-
-            // NUR UI aktualisieren wenn Benutzer NICHT gerade tippt
-            if (!isUserTyping()) {
-              populateExerciseDropdown();
-              displayExerciseList();
-            } else {
-              console.log('⏸️ Exercises UI-Update übersprungen - Benutzer tippt gerade');
-            }
-
             updated = true;
             console.log('✅ Übungen aktualisiert durch Realtime-Sync:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', data.exercises.length, 'Cloud)');
           }
@@ -705,6 +695,7 @@ function startRealtimeSync() {
 
         if (updated) {
           localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+          markUpdatesAvailable();
 
           lastSyncTime = new Date();
           updateSyncStatus('synced', `Aktualisiert: ${formatTime(lastSyncTime)}`);
@@ -1008,4 +999,4 @@ window.registerWithEmail = registerWithEmail;
 window.logout = logout;
 window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
-window.trackFormInteraction = trackFormInteraction;
+window.manualUpdateUI = manualUpdateUI;
