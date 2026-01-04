@@ -436,21 +436,50 @@ async function deleteDailyBorgFromCloud(date) {
   }
 }
 
-// Hilfsfunktion: Prüfen ob Benutzer gerade tippt
+// Tracking ob Benutzer gerade im Formular arbeitet
+let userInteractionTimestamp = 0;
+const INTERACTION_TIMEOUT = 5000; // 5 Sekunden nach letzter Interaktion
+
+// Hilfsfunktion: Prüfen ob Benutzer gerade tippt oder kürzlich im Formular war
 function isUserTyping() {
+  const now = Date.now();
+  const timeSinceInteraction = now - userInteractionTimestamp;
+
+  // Wenn in den letzten 5 Sekunden eine Interaktion war, blockiere UI-Updates
+  if (timeSinceInteraction < INTERACTION_TIMEOUT) {
+    console.log('🔒 Benutzer war vor', Math.round(timeSinceInteraction / 1000), 'Sekunden aktiv - UI-Update blockiert');
+    return true;
+  }
+
   const activeElement = document.activeElement;
   if (!activeElement) return false;
 
   const tagName = activeElement.tagName.toLowerCase();
   const type = activeElement.type ? activeElement.type.toLowerCase() : '';
+  const id = activeElement.id || '';
 
   // Prüfe ob ein Input, Textarea oder contenteditable Feld fokussiert ist
-  return (
+  const isTyping = (
     tagName === 'input' ||
     tagName === 'textarea' ||
     activeElement.isContentEditable ||
-    (tagName === 'select' && activeElement.classList.contains('open'))
+    (tagName === 'select' && activeElement.classList.contains('open')) ||
+    id.startsWith('rep') ||  // Wiederholungs-Inputs (rep1, rep2, ...)
+    id.startsWith('weight')  // Gewichts-Inputs (weight1, weight2, ...)
   );
+
+  if (isTyping) {
+    console.log('🔒 Benutzer tippt in:', tagName, 'ID:', id, 'Type:', type);
+    userInteractionTimestamp = now; // Update timestamp
+  }
+
+  return isTyping;
+}
+
+// Tracking-Funktion für Formular-Interaktionen
+function trackFormInteraction() {
+  userInteractionTimestamp = Date.now();
+  console.log('📝 Formular-Interaktion registriert');
 }
 
 // Echtzeit-Synchronisation starten
@@ -979,3 +1008,4 @@ window.registerWithEmail = registerWithEmail;
 window.logout = logout;
 window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
+window.trackFormInteraction = trackFormInteraction;
