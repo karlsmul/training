@@ -1320,24 +1320,33 @@ function populateVolumeMonthDropdown() {
     // Sortiere Monate absteigend (neueste zuerst)
     const sortedMonths = Array.from(monthsWithData).sort().reverse();
 
+    // Bestimme welcher Monat ausgewählt sein soll
+    const selectedKey = selectedVolumeMonth
+        ? `${selectedVolumeMonth.year}-${String(selectedVolumeMonth.month).padStart(2, '0')}`
+        : currentMonthKey;
+
     dropdown.innerHTML = sortedMonths.map(monthKey => {
         const [year, month] = monthKey.split('-').map(Number);
         const date = new Date(year, month, 1);
         const label = date.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
-        const isCurrentMonth = monthKey === currentMonthKey;
 
-        return `<option value="${monthKey}" ${isCurrentMonth ? 'selected' : ''}>${label}</option>`;
+        return `<option value="${monthKey}" ${monthKey === selectedKey ? 'selected' : ''}>${label}</option>`;
     }).join('');
 
-    // Event-Listener für Monatswechsel
-    dropdown.onchange = function() {
-        const [year, month] = this.value.split('-').map(Number);
-        selectedVolumeMonth = { year, month };
-        displayTrainingVolume();
-    };
+    // Event-Listener für Monatswechsel (nur einmal setzen)
+    if (!dropdown.hasAttribute('data-listener-added')) {
+        dropdown.setAttribute('data-listener-added', 'true');
+        dropdown.addEventListener('change', function() {
+            const [year, month] = this.value.split('-').map(Number);
+            selectedVolumeMonth = { year, month };
+            displayTrainingVolume();
+        });
+    }
 
-    // Initial auf aktuellen Monat setzen
-    selectedVolumeMonth = { year: now.getFullYear(), month: now.getMonth() };
+    // Initial auf aktuellen Monat setzen, falls noch nicht gesetzt
+    if (!selectedVolumeMonth) {
+        selectedVolumeMonth = { year: now.getFullYear(), month: now.getMonth() };
+    }
 }
 
 function calculateTotalReps(exerciseTrainings) {
