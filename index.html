@@ -244,19 +244,19 @@
                         </div>
                     </div>
 
-                    <!-- Gesamtwiederholungen pro Übung -->
+                    <!-- Trainingsvolumen Übersicht -->
                     <div class="total-reps-section">
-                        <h3>Gesamtwiederholungen pro Übung</h3>
-                        <p class="section-subtitle">Zeigt dein Trainingsvolumen nach Wiederholungsbereich (3, 6, 10 Wdh.)</p>
+                        <h3>Trainingsvolumen</h3>
+                        <p class="section-subtitle">Ziel pro Übung = 100% (Klimmzüge: 120/Woche, andere: 76/Woche)</p>
 
-                        <div class="exercise-filter">
-                            <label for="totalRepsExercise">Übung auswählen:</label>
-                            <select id="totalRepsExercise">
-                                <option value="">-- Übung auswählen --</option>
+                        <div class="volume-month-selector">
+                            <label for="volumeMonth">Monat:</label>
+                            <select id="volumeMonth">
+                                <!-- Wird dynamisch gefüllt -->
                             </select>
                         </div>
 
-                        <div id="totalRepsContainer" class="total-reps-container">
+                        <div id="volumeContainer" class="volume-container">
                             <!-- Wird dynamisch gefüllt -->
                         </div>
                     </div>
@@ -314,22 +314,6 @@
                         </div>
                     </div>
 
-                    <div class="settings-section">
-                        <h3>Persönliche Informationen</h3>
-                        <form id="personalInfoForm">
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="age">Alter:</label>
-                                    <input type="number" id="age" min="1" placeholder="z.B. 25">
-                                </div>
-                                <div class="form-group">
-                                    <label for="height">Körpergröße (cm):</label>
-                                    <input type="number" id="height" min="1" placeholder="z.B. 180">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn-primary">Speichern</button>
-                        </form>
-                    </div>
                 </div>
             </section>
         </main>
@@ -377,11 +361,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=15"></script>
-    <script src="sync.js?v=15"></script>
+    <script src="firebase-config.js?v=16"></script>
+    <script src="sync.js?v=16"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=15"></script>
+    <script src="app.js?v=16"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -393,7 +377,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v15') {
+                        if (cacheName !== 'krafttraining-v16') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -403,7 +387,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=15')
+                navigator.serviceWorker.register('/service-worker.js?v=16')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

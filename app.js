@@ -232,7 +232,6 @@ const planList = document.getElementById('planList');
 // Settings elements
 const bodyDataForm = document.getElementById('bodyDataForm');
 const bodyWeightHistory = document.getElementById('bodyWeightHistory');
-const personalInfoForm = document.getElementById('personalInfoForm');
 const exerciseForm = document.getElementById('exerciseForm');
 const exerciseList = document.getElementById('exerciseList');
 const exerciseSelect = document.getElementById('exercise');
@@ -1186,34 +1185,6 @@ function deleteExercise(exerciseName) {
     }
 }
 
-// ========================================
-// EINSTELLUNGEN - PERSÖNLICHE INFO
-// ========================================
-
-personalInfoForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    personalInfo.age = parseInt(document.getElementById('age').value) || null;
-    personalInfo.height = parseInt(document.getElementById('height').value) || null;
-
-    localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
-
-    // Zu Cloud synchronisieren
-    if (typeof syncPersonalInfoToCloud === 'function') {
-        await syncPersonalInfoToCloud(personalInfo);
-    }
-
-    showNotification('Persönliche Informationen gespeichert!');
-});
-
-function loadPersonalInfo() {
-    if (personalInfo.age) {
-        document.getElementById('age').value = personalInfo.age;
-    }
-    if (personalInfo.height) {
-        document.getElementById('height').value = personalInfo.height;
-    }
-}
 
 // ========================================
 // STATISTIKEN
@@ -1258,221 +1229,307 @@ function updateStatistics() {
 // GESAMTWIEDERHOLUNGEN PRO ÜBUNG
 // ========================================
 
-function populateTotalRepsExerciseDropdown() {
-    const select = document.getElementById('totalRepsExercise');
-    if (!select) return;
+// Zielwerte für 100%
+const TARGET_WEEK_REPS_DEFAULT = 76;   // 4×3 + 4×6 + 4×10 = 12 + 24 + 40 = 76
+const TARGET_WEEK_REPS_KLIMMZUEGE = 120; // 3×4×10 = 120
 
-    const currentValue = select.value;
-    select.innerHTML = '<option value="">-- Übung auswählen --</option>';
+// Aktuell ausgewählter Monat für Trainingsvolumen (null = aktueller Monat)
+let selectedVolumeMonth = null;
 
-    // Alle Übungen aus Trainings sammeln (nur Gewichtstraining)
-    const exercisesFromTrainings = [...new Set(
+function getWeekTargetForExercise(exerciseName) {
+    // Klimmzüge haben ein anderes Ziel
+    if (exerciseName.toLowerCase().includes('klimmzug') || exerciseName.toLowerCase().includes('klimmzüge')) {
+        return TARGET_WEEK_REPS_KLIMMZUEGE;
+    }
+    return TARGET_WEEK_REPS_DEFAULT;
+}
+
+function getMonthTargetForExercise(exerciseName, year, month) {
+    const weekTarget = getWeekTargetForExercise(exerciseName);
+    // Berechne anteilig basierend auf der Anzahl der Tage im Monat
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Wochen im Monat = Tage / 7
+    const weeksInMonth = daysInMonth / 7;
+    return Math.round(weekTarget * weeksInMonth);
+}
+
+function getWeekDatesForMonth(year, month) {
+    // Für vergangene Monate: Alle Wochen des Monats (keine aktuelle Woche)
+    // Für aktuellen Monat: Aktuelle Kalenderwoche
+    const now = new Date();
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+    if (isCurrentMonth) {
+        // Aktuelle Woche
+        const dayOfWeek = now.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + mondayOffset);
+        monday.setHours(0, 0, 0, 0);
+
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+
+        return { start: monday, end: sunday };
+    } else {
+        // Letzte volle Woche des vergangenen Monats
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+        const dayOfWeek = lastDayOfMonth.getDay();
+        const sundayOffset = dayOfWeek === 0 ? 0 : -dayOfWeek;
+
+        const sunday = new Date(lastDayOfMonth);
+        sunday.setDate(lastDayOfMonth.getDate() + sundayOffset);
+        sunday.setHours(23, 59, 59, 999);
+
+        const monday = new Date(sunday);
+        monday.setDate(sunday.getDate() - 6);
+        monday.setHours(0, 0, 0, 0);
+
+        return { start: monday, end: sunday };
+    }
+}
+
+function getMonthDates(year, month) {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+    return { start: firstDay, end: lastDay };
+}
+
+function populateVolumeMonthDropdown() {
+    const dropdown = document.getElementById('volumeMonth');
+    if (!dropdown) return;
+
+    // Sammle alle Monate mit Trainings
+    const monthsWithData = new Set();
+    trainings.forEach(t => {
+        if (t.trainingType === 'weight' || !t.trainingType) {
+            const date = new Date(t.date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth()).padStart(2, '0')}`;
+            monthsWithData.add(monthKey);
+        }
+    });
+
+    // Aktuellen Monat immer hinzufügen
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+    monthsWithData.add(currentMonthKey);
+
+    // Sortiere Monate absteigend (neueste zuerst)
+    const sortedMonths = Array.from(monthsWithData).sort().reverse();
+
+    dropdown.innerHTML = sortedMonths.map(monthKey => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const date = new Date(year, month, 1);
+        const label = date.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+        const isCurrentMonth = monthKey === currentMonthKey;
+
+        return `<option value="${monthKey}" ${isCurrentMonth ? 'selected' : ''}>${label}</option>`;
+    }).join('');
+
+    // Event-Listener für Monatswechsel
+    dropdown.onchange = function() {
+        const [year, month] = this.value.split('-').map(Number);
+        selectedVolumeMonth = { year, month };
+        displayTrainingVolume();
+    };
+
+    // Initial auf aktuellen Monat setzen
+    selectedVolumeMonth = { year: now.getFullYear(), month: now.getMonth() };
+}
+
+function calculateTotalReps(exerciseTrainings) {
+    let total = 0;
+    exerciseTrainings.forEach(training => {
+        const reps = Array.isArray(training.reps) ? training.reps : [training.reps];
+        reps.forEach(rep => {
+            total += parseInt(rep) || 0;
+        });
+    });
+    return total;
+}
+
+// Chart-Instanzen speichern
+let volumeCharts = {};
+
+function displayTrainingVolume() {
+    const container = document.getElementById('volumeContainer');
+    if (!container) return;
+
+    // Dropdown initialisieren falls noch nicht geschehen
+    populateVolumeMonthDropdown();
+
+    // Alte Charts zerstören
+    Object.values(volumeCharts).forEach(chart => chart.destroy());
+    volumeCharts = {};
+
+    // Ausgewählten Monat bestimmen
+    const now = new Date();
+    const year = selectedVolumeMonth ? selectedVolumeMonth.year : now.getFullYear();
+    const month = selectedVolumeMonth ? selectedVolumeMonth.month : now.getMonth();
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+
+    // Alle Übungen sammeln (nur Gewichtstraining)
+    const exerciseNames = [...new Set(
         trainings
-            .filter(t => t.trainingType === 'weight')
+            .filter(t => t.trainingType === 'weight' || !t.trainingType)
             .map(t => t.exercise)
     )].sort();
 
-    exercisesFromTrainings.forEach(exercise => {
-        const option = document.createElement('option');
-        option.value = exercise;
-        option.textContent = exercise;
-        select.appendChild(option);
-    });
-
-    // Restore selected value if it exists
-    if (currentValue && exercisesFromTrainings.includes(currentValue)) {
-        select.value = currentValue;
-    }
-}
-
-function calculateTotalRepsForExercise(exerciseName) {
-    // Filtere Trainings für diese Übung (nur Gewichtstraining)
-    const exerciseTrainings = trainings.filter(t =>
-        t.exercise === exerciseName && t.trainingType === 'weight'
-    );
-
-    if (exerciseTrainings.length === 0) {
-        return null;
-    }
-
-    // Rep-Bereiche definieren: 1-4 = "3er", 5-7 = "6er", 8+ = "10er"
-    const repRanges = {
-        '3er (1-4 Wdh.)': { min: 1, max: 4, total: 0, trainings: [], color: '#ff6b6b' },
-        '6er (5-7 Wdh.)': { min: 5, max: 7, total: 0, trainings: [], color: '#ffd93d' },
-        '10er (8+ Wdh.)': { min: 8, max: Infinity, total: 0, trainings: [], color: '#6bcf7f' }
-    };
-
-    // Trainings nach Datum sortieren
-    const sortedTrainings = [...exerciseTrainings].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // Wiederholungen pro Satz analysieren und zuordnen
-    sortedTrainings.forEach(training => {
-        const reps = Array.isArray(training.reps) ? training.reps : [training.reps];
-        const date = training.date;
-
-        reps.forEach(rep => {
-            const repCount = parseInt(rep) || 0;
-
-            for (const [rangeName, range] of Object.entries(repRanges)) {
-                if (repCount >= range.min && repCount <= range.max) {
-                    range.total += repCount;
-
-                    // Tracking für Chart: summiere pro Datum
-                    const existingEntry = range.trainings.find(t => t.date === date);
-                    if (existingEntry) {
-                        existingEntry.reps += repCount;
-                    } else {
-                        range.trainings.push({ date, reps: repCount });
-                    }
-                    break;
-                }
-            }
-        });
-    });
-
-    // Kumulative Summen berechnen für jeden Bereich
-    for (const range of Object.values(repRanges)) {
-        let cumulative = 0;
-        range.trainings = range.trainings.map(t => {
-            cumulative += t.reps;
-            return { date: t.date, reps: t.reps, cumulative };
-        });
-    }
-
-    return repRanges;
-}
-
-let totalRepsChart = null;
-
-function displayTotalReps(exerciseName) {
-    const container = document.getElementById('totalRepsContainer');
-    if (!container) return;
-
-    if (!exerciseName) {
+    if (exerciseNames.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <p>Wähle eine Übung aus, um die Gesamtwiederholungen zu sehen.</p>
+                <p>Noch keine Trainingsdaten vorhanden.</p>
             </div>
         `;
-        if (totalRepsChart) {
-            totalRepsChart.destroy();
-            totalRepsChart = null;
-        }
         return;
     }
 
-    const repRanges = calculateTotalRepsForExercise(exerciseName);
+    const weekDates = getWeekDatesForMonth(year, month);
+    const monthDates = getMonthDates(year, month);
 
-    if (!repRanges) {
+    // Für jede Übung das Volumen berechnen
+    const volumeData = exerciseNames.map(exerciseName => {
+        const allExerciseTrainings = trainings.filter(t =>
+            t.exercise === exerciseName && (t.trainingType === 'weight' || !t.trainingType)
+        );
+
+        const weekTrainings = allExerciseTrainings.filter(t => {
+            const date = new Date(t.date);
+            return date >= weekDates.start && date <= weekDates.end;
+        });
+
+        const monthTrainings = allExerciseTrainings.filter(t => {
+            const date = new Date(t.date);
+            return date >= monthDates.start && date <= monthDates.end;
+        });
+
+        const weekReps = calculateTotalReps(weekTrainings);
+        const monthReps = calculateTotalReps(monthTrainings);
+
+        const weekTarget = getWeekTargetForExercise(exerciseName);
+        const monthTarget = getMonthTargetForExercise(exerciseName, year, month);
+
+        return {
+            name: exerciseName,
+            weekReps,
+            monthReps,
+            weekTarget,
+            monthTarget,
+            weekPercent: Math.round((weekReps / weekTarget) * 100),
+            monthPercent: Math.round((monthReps / monthTarget) * 100)
+        };
+    });
+
+    // Nur Übungen anzeigen, die Daten im Monat haben
+    const activeExercises = volumeData.filter(v => v.monthReps > 0);
+
+    if (activeExercises.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <p>Keine Trainingsdaten für "${exerciseName}" gefunden.</p>
+                <p>Keine Trainings in diesem Monat.</p>
             </div>
         `;
-        if (totalRepsChart) {
-            totalRepsChart.destroy();
-            totalRepsChart = null;
-        }
         return;
     }
 
-    // Statistik-Cards erstellen
-    const statsHTML = Object.entries(repRanges).map(([rangeName, range]) => `
-        <div class="rep-range-card" style="border-left: 4px solid ${range.color};">
-            <div class="rep-range-name">${rangeName}</div>
-            <div class="rep-range-total">${range.total.toLocaleString('de-DE')}</div>
-            <div class="rep-range-label">Gesamtwiederholungen</div>
+    const monthName = new Date(year, month, 1).toLocaleDateString('de-DE', { month: 'long' });
+    const weekLabel = isCurrentMonth ? 'Akt. Woche' : 'Letzte Woche';
+
+    // HTML mit Canvas für jede Übung erstellen
+    const exercisesHTML = activeExercises.map((exercise, index) => `
+        <div class="volume-card">
+            <div class="volume-card-header">${exercise.name}</div>
+            <div class="volume-charts-row">
+                <div class="volume-chart-container">
+                    <canvas id="weekChart${index}"></canvas>
+                    <div class="volume-chart-label">${weekLabel}</div>
+                    <div class="volume-chart-reps">${exercise.weekReps} / ${exercise.weekTarget}</div>
+                </div>
+                <div class="volume-chart-container">
+                    <canvas id="monthChart${index}"></canvas>
+                    <div class="volume-chart-label">${monthName}</div>
+                    <div class="volume-chart-reps">${exercise.monthReps} / ${exercise.monthTarget}</div>
+                </div>
+            </div>
         </div>
     `).join('');
 
-    // Chart Canvas hinzufügen
-    container.innerHTML = `
-        <div class="rep-range-cards">
-            ${statsHTML}
-        </div>
-        <div class="chart-container">
-            <h4>Entwicklung der Gesamtwiederholungen (kumulativ)</h4>
-            <canvas id="totalRepsChart"></canvas>
-        </div>
-    `;
+    container.innerHTML = `<div class="volume-cards">${exercisesHTML}</div>`;
 
-    // Chart erstellen
-    const canvas = document.getElementById('totalRepsChart');
-    if (!canvas) return;
-
-    // Alle Daten für Chart sammeln
-    const datasets = [];
-
-    for (const [rangeName, range] of Object.entries(repRanges)) {
-        if (range.trainings.length > 0) {
-            datasets.push({
-                label: rangeName,
-                data: range.trainings.map(t => ({ x: t.date, y: t.cumulative })),
-                borderColor: range.color,
-                backgroundColor: range.color + '40',
-                tension: 0.4,
-                fill: false
-            });
-        }
-    }
-
-    if (datasets.length === 0) {
-        return;
-    }
-
-    if (totalRepsChart) {
-        totalRepsChart.destroy();
-    }
-
-    const ctx = canvas.getContext('2d');
-    totalRepsChart = new Chart(ctx, {
-        type: 'line',
-        data: { datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: { display: true },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: ${context.parsed.y.toLocaleString('de-DE')} Wdh.`;
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day',
-                        displayFormats: { day: 'dd.MM.yy' }
-                    },
-                    title: { display: true, text: 'Datum' }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Kumulative Wiederholungen' },
-                    ticks: {
-                        callback: function(value) {
-                            return value.toLocaleString('de-DE');
-                        }
-                    }
-                }
-            }
-        }
+    // Charts erstellen
+    activeExercises.forEach((exercise, index) => {
+        createVolumeChart(`weekChart${index}`, exercise.weekPercent, exercise.name + ' Woche');
+        createVolumeChart(`monthChart${index}`, exercise.monthPercent, exercise.name + ' Monat');
     });
 }
 
-// Event Listener für Übungsauswahl
-document.addEventListener('DOMContentLoaded', function() {
-    const totalRepsSelect = document.getElementById('totalRepsExercise');
-    if (totalRepsSelect) {
-        totalRepsSelect.addEventListener('change', function() {
-            displayTotalReps(this.value);
-        });
+function createVolumeChart(canvasId, percent, label) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    // Farbe basierend auf Prozent
+    let color;
+    if (percent >= 105) {
+        color = '#6bcf7f'; // Grün - Ziel übertroffen!
+    } else if (percent >= 80) {
+        color = '#ffd93d'; // Gelb - Fast am Ziel
+    } else if (percent >= 50) {
+        color = '#ff9f43'; // Orange - Auf dem Weg
+    } else {
+        color = '#ff6b6b'; // Rot - Noch weit weg
     }
-});
+
+    // Begrenze Anzeige auf 100% für den Kreis, zeige aber echten Wert
+    const displayPercent = Math.min(percent, 100);
+    const remaining = 100 - displayPercent;
+
+    const ctx = canvas.getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [displayPercent, remaining],
+                backgroundColor: [color, '#e0e0e0'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            beforeDraw: function(chart) {
+                const ctx = chart.ctx;
+                const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
+                const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillStyle = color;
+                ctx.fillText(percent + '%', centerX, centerY);
+                ctx.restore();
+            }
+        }]
+    });
+
+    volumeCharts[canvasId] = chart;
+}
+
+// Für Kompatibilität mit sync.js
+function populateTotalRepsExerciseDropdown() {
+    displayTrainingVolume();
+}
 
 // ========================================
 // CHARTS
@@ -1767,8 +1824,7 @@ tabButtons.forEach(button => {
             updateBodyWeightChart();
             updatePersonalRecordsChart();
             updateBorgValueChart();
-            populateTotalRepsExerciseDropdown();
-            displayTotalReps(document.getElementById('totalRepsExercise')?.value || '');
+            displayTrainingVolume();
         }
 
         // Personal Records aktualisieren
@@ -1785,7 +1841,6 @@ tabButtons.forEach(button => {
         if (tabName === 'settings') {
             displayBodyWeightHistory();
             displayExerciseList();
-            loadPersonalInfo();
         }
     });
 });
@@ -1936,6 +1991,7 @@ window.displayTrainingPlans = displayTrainingPlans;
 window.displayBodyWeightHistory = displayBodyWeightHistory;
 window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
+window.populateTotalRepsExerciseDropdown = populateTotalRepsExerciseDropdown;
 
 // ========================================
 // APP INITIALISIERUNG
@@ -1950,7 +2006,6 @@ async function initApp() {
     displayTrainingPlans();
     displayBodyWeightHistory();
     displayExerciseList();
-    loadPersonalInfo();
     updateStatistics();
 
     // Login Event Listener hinzufügen

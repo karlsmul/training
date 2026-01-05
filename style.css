@@ -1390,6 +1390,87 @@ select:focus {
     color: #999;
 }
 
+/* Trainingsvolumen Übersicht */
+.volume-month-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.volume-month-selector label {
+    font-weight: 600;
+    color: #333;
+}
+
+.volume-month-selector select {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: white;
+    color: #333;
+    cursor: pointer;
+}
+
+.volume-month-selector select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.volume-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.volume-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+}
+
+.volume-card-header {
+    font-weight: 700;
+    color: #333;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.volume-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.volume-chart-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.volume-chart-container canvas {
+    max-width: 100px;
+    max-height: 100px;
+}
+
+.volume-chart-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+}
+
+.volume-chart-reps {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 2px;
+}
+
 /* Settings Section */
 .settings-section {
     background: #f8f9fa;

@@ -222,6 +222,11 @@ async function syncFromCloud() {
     populateExerciseDropdown();
     displayExerciseList();
 
+    // Aktualisiere auch das Gesamtwiederholungen-Dropdown falls es existiert
+    if (typeof populateTotalRepsExerciseDropdown === 'function') {
+        populateTotalRepsExerciseDropdown();
+    }
+
     lastSyncTime = new Date();
     updateSyncStatus('synced', `Zuletzt synchronisiert: ${formatTime(lastSyncTime)}`);
 
@@ -466,6 +471,11 @@ function manualUpdateUI() {
   displayBodyWeightHistory();
   populateExerciseDropdown();
   displayExerciseList();
+
+  // Aktualisiere auch das Gesamtwiederholungen-Dropdown falls es existiert
+  if (typeof populateTotalRepsExerciseDropdown === 'function') {
+      populateTotalRepsExerciseDropdown();
+  }
 
   // Reset update indicator
   hasNewUpdates = false;
@@ -917,9 +927,9 @@ function showUserInfo(user) {
   const userInfoElement = document.getElementById('userInfo');
   if (!userInfoElement) return;
 
+  // Nur E-Mail und Logout-Button anzeigen (kein Avatar)
   userInfoElement.innerHTML = `
     <div class="user-profile">
-      ${user.photoURL ? `<img src="${user.photoURL}" alt="Profil" class="user-avatar">` : ''}
       <span class="user-name">${user.email || user.displayName}</span>
       <button class="btn-logout" id="logoutButton">Abmelden</button>
     </div>
