@@ -71,6 +71,138 @@ let editingId = null;
 let currentTrainingType = 'weight';
 
 // ========================================
+// ZENTRALER APP STATE
+// ========================================
+
+const AppState = {
+    // Daten-Referenzen (für schrittweise Migration)
+    get trainings() { return trainings; },
+    get trainingPlans() { return trainingPlans; },
+    get bodyWeights() { return bodyWeights; },
+    get dailyBorgValues() { return dailyBorgValues; },
+    get personalInfo() { return personalInfo; },
+    get exercises() { return exercises; },
+
+    // UI-State
+    get editMode() { return editMode; },
+    get editingId() { return editingId; },
+    get currentTrainingType() { return currentTrainingType; }
+};
+
+// ========================================
+// EDIT-STATE MANAGEMENT
+// ========================================
+
+function isCurrentlyEditing(id = null) {
+    if (id !== null) {
+        return editMode && editingId === id;
+    }
+    return editMode;
+}
+
+function setEditMode(training = null) {
+    if (training) {
+        editMode = true;
+        editingId = training.id;
+        currentTrainingType = training.trainingType || 'weight';
+    } else {
+        editMode = false;
+        editingId = null;
+        currentTrainingType = 'weight';
+    }
+}
+
+function updateEditUI() {
+    const isEditing = editMode;
+
+    // Formular-Titel und Button
+    if (formTitle) {
+        formTitle.textContent = isEditing ? 'Training bearbeiten ✏️' : 'Neues Training eintragen';
+    }
+    if (submitBtn) {
+        submitBtn.textContent = isEditing ? 'Änderungen speichern' : 'Eintrag hinzufügen';
+    }
+    if (cancelBtn) {
+        cancelBtn.style.display = isEditing ? 'block' : 'none';
+    }
+    if (inputSection) {
+        inputSection.classList.toggle('editing', isEditing);
+    }
+
+    // Training Type Toggle UI
+    if (toggleBtns) {
+        toggleBtns.forEach(btn => {
+            if (btn.getAttribute('data-type') === currentTrainingType) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    // Gewicht/Zeit Gruppen anzeigen
+    if (weightGroup && timeGroup) {
+        if (currentTrainingType === 'weight') {
+            weightGroup.style.display = 'block';
+            timeGroup.style.display = 'none';
+        } else {
+            weightGroup.style.display = 'none';
+            timeGroup.style.display = 'block';
+        }
+    }
+}
+
+// ========================================
+// TRAININGS STORE
+// ========================================
+
+const TrainingsStore = {
+    getAll() {
+        return [...trainings];
+    },
+
+    getById(id) {
+        return trainings.find(t => t.id === id);
+    },
+
+    add(training) {
+        trainings.push(training);
+        this._persist();
+        this._notifyChange();
+        return training;
+    },
+
+    update(id, data) {
+        const index = trainings.findIndex(t => t.id === id);
+        if (index !== -1) {
+            trainings[index] = { ...trainings[index], ...data };
+            this._persist();
+            this._notifyChange();
+            return trainings[index];
+        }
+        return null;
+    },
+
+    remove(id) {
+        const removed = trainings.find(t => t.id === id);
+        trainings = trainings.filter(t => t.id !== id);
+        this._persist();
+        this._notifyChange();
+        return removed;
+    },
+
+    _persist() {
+        localStorage.setItem('trainings', JSON.stringify(trainings));
+    },
+
+    _notifyChange() {
+        displayTrainings();
+        displayPersonalRecords();
+        updateStatistics();
+    }
+};
+
+// ========================================
 // DOM ELEMENTE
 // ========================================
 
