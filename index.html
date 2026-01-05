@@ -243,6 +243,23 @@
                             <div class="stat-value" id="totalTrainings">0</div>
                         </div>
                     </div>
+
+                    <!-- Gesamtwiederholungen pro Übung -->
+                    <div class="total-reps-section">
+                        <h3>Gesamtwiederholungen pro Übung</h3>
+                        <p class="section-subtitle">Zeigt dein Trainingsvolumen nach Wiederholungsbereich (3, 6, 10 Wdh.)</p>
+
+                        <div class="exercise-filter">
+                            <label for="totalRepsExercise">Übung auswählen:</label>
+                            <select id="totalRepsExercise">
+                                <option value="">-- Übung auswählen --</option>
+                            </select>
+                        </div>
+
+                        <div id="totalRepsContainer" class="total-reps-container">
+                            <!-- Wird dynamisch gefüllt -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Settings Tab -->
@@ -360,11 +377,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=14"></script>
-    <script src="sync.js?v=14"></script>
+    <script src="firebase-config.js?v=15"></script>
+    <script src="sync.js?v=15"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -376,7 +393,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v14') {
+                        if (cacheName !== 'krafttraining-v15') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -386,7 +403,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=14')
+                navigator.serviceWorker.register('/service-worker.js?v=15')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

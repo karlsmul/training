@@ -1255,6 +1255,226 @@ function updateStatistics() {
 }
 
 // ========================================
+// GESAMTWIEDERHOLUNGEN PRO ÜBUNG
+// ========================================
+
+function populateTotalRepsExerciseDropdown() {
+    const select = document.getElementById('totalRepsExercise');
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- Übung auswählen --</option>';
+
+    // Alle Übungen aus Trainings sammeln (nur Gewichtstraining)
+    const exercisesFromTrainings = [...new Set(
+        trainings
+            .filter(t => t.trainingType === 'weight')
+            .map(t => t.exercise)
+    )].sort();
+
+    exercisesFromTrainings.forEach(exercise => {
+        const option = document.createElement('option');
+        option.value = exercise;
+        option.textContent = exercise;
+        select.appendChild(option);
+    });
+
+    // Restore selected value if it exists
+    if (currentValue && exercisesFromTrainings.includes(currentValue)) {
+        select.value = currentValue;
+    }
+}
+
+function calculateTotalRepsForExercise(exerciseName) {
+    // Filtere Trainings für diese Übung (nur Gewichtstraining)
+    const exerciseTrainings = trainings.filter(t =>
+        t.exercise === exerciseName && t.trainingType === 'weight'
+    );
+
+    if (exerciseTrainings.length === 0) {
+        return null;
+    }
+
+    // Rep-Bereiche definieren: 1-4 = "3er", 5-7 = "6er", 8+ = "10er"
+    const repRanges = {
+        '3er (1-4 Wdh.)': { min: 1, max: 4, total: 0, trainings: [], color: '#ff6b6b' },
+        '6er (5-7 Wdh.)': { min: 5, max: 7, total: 0, trainings: [], color: '#ffd93d' },
+        '10er (8+ Wdh.)': { min: 8, max: Infinity, total: 0, trainings: [], color: '#6bcf7f' }
+    };
+
+    // Trainings nach Datum sortieren
+    const sortedTrainings = [...exerciseTrainings].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    // Wiederholungen pro Satz analysieren und zuordnen
+    sortedTrainings.forEach(training => {
+        const reps = Array.isArray(training.reps) ? training.reps : [training.reps];
+        const date = training.date;
+
+        reps.forEach(rep => {
+            const repCount = parseInt(rep) || 0;
+
+            for (const [rangeName, range] of Object.entries(repRanges)) {
+                if (repCount >= range.min && repCount <= range.max) {
+                    range.total += repCount;
+
+                    // Tracking für Chart: summiere pro Datum
+                    const existingEntry = range.trainings.find(t => t.date === date);
+                    if (existingEntry) {
+                        existingEntry.reps += repCount;
+                    } else {
+                        range.trainings.push({ date, reps: repCount });
+                    }
+                    break;
+                }
+            }
+        });
+    });
+
+    // Kumulative Summen berechnen für jeden Bereich
+    for (const range of Object.values(repRanges)) {
+        let cumulative = 0;
+        range.trainings = range.trainings.map(t => {
+            cumulative += t.reps;
+            return { date: t.date, reps: t.reps, cumulative };
+        });
+    }
+
+    return repRanges;
+}
+
+let totalRepsChart = null;
+
+function displayTotalReps(exerciseName) {
+    const container = document.getElementById('totalRepsContainer');
+    if (!container) return;
+
+    if (!exerciseName) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Wähle eine Übung aus, um die Gesamtwiederholungen zu sehen.</p>
+            </div>
+        `;
+        if (totalRepsChart) {
+            totalRepsChart.destroy();
+            totalRepsChart = null;
+        }
+        return;
+    }
+
+    const repRanges = calculateTotalRepsForExercise(exerciseName);
+
+    if (!repRanges) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Keine Trainingsdaten für "${exerciseName}" gefunden.</p>
+            </div>
+        `;
+        if (totalRepsChart) {
+            totalRepsChart.destroy();
+            totalRepsChart = null;
+        }
+        return;
+    }
+
+    // Statistik-Cards erstellen
+    const statsHTML = Object.entries(repRanges).map(([rangeName, range]) => `
+        <div class="rep-range-card" style="border-left: 4px solid ${range.color};">
+            <div class="rep-range-name">${rangeName}</div>
+            <div class="rep-range-total">${range.total.toLocaleString('de-DE')}</div>
+            <div class="rep-range-label">Gesamtwiederholungen</div>
+        </div>
+    `).join('');
+
+    // Chart Canvas hinzufügen
+    container.innerHTML = `
+        <div class="rep-range-cards">
+            ${statsHTML}
+        </div>
+        <div class="chart-container">
+            <h4>Entwicklung der Gesamtwiederholungen (kumulativ)</h4>
+            <canvas id="totalRepsChart"></canvas>
+        </div>
+    `;
+
+    // Chart erstellen
+    const canvas = document.getElementById('totalRepsChart');
+    if (!canvas) return;
+
+    // Alle Daten für Chart sammeln
+    const datasets = [];
+
+    for (const [rangeName, range] of Object.entries(repRanges)) {
+        if (range.trainings.length > 0) {
+            datasets.push({
+                label: rangeName,
+                data: range.trainings.map(t => ({ x: t.date, y: t.cumulative })),
+                borderColor: range.color,
+                backgroundColor: range.color + '40',
+                tension: 0.4,
+                fill: false
+            });
+        }
+    }
+
+    if (datasets.length === 0) {
+        return;
+    }
+
+    if (totalRepsChart) {
+        totalRepsChart.destroy();
+    }
+
+    const ctx = canvas.getContext('2d');
+    totalRepsChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { display: true },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toLocaleString('de-DE')} Wdh.`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day',
+                        displayFormats: { day: 'dd.MM.yy' }
+                    },
+                    title: { display: true, text: 'Datum' }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Kumulative Wiederholungen' },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('de-DE');
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Event Listener für Übungsauswahl
+document.addEventListener('DOMContentLoaded', function() {
+    const totalRepsSelect = document.getElementById('totalRepsExercise');
+    if (totalRepsSelect) {
+        totalRepsSelect.addEventListener('change', function() {
+            displayTotalReps(this.value);
+        });
+    }
+});
+
+// ========================================
 // CHARTS
 // ========================================
 
@@ -1547,6 +1767,8 @@ tabButtons.forEach(button => {
             updateBodyWeightChart();
             updatePersonalRecordsChart();
             updateBorgValueChart();
+            populateTotalRepsExerciseDropdown();
+            displayTotalReps(document.getElementById('totalRepsExercise')?.value || '');
         }
 
         // Personal Records aktualisieren
