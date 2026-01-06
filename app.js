@@ -579,6 +579,62 @@ clearHistoryBtn.addEventListener('click', function() {
 // TRAININGS ANZEIGEN
 // ========================================
 
+/**
+ * Ermittelt den Wiederholungsbereich eines Trainings basierend auf dem Plan
+ * @param {Object} training - Das Training
+ * @returns {string|null} '3er' | '6er' | '10er' | null
+ */
+function getRepRangeType(training) {
+    if (training.trainingType === 'time') return null;
+
+    const plan = trainingPlans.find(p => p.exercise === training.exercise);
+    if (!plan) return null;
+
+    const weight = training.weightsPerSet ? training.weightsPerSet[0] : training.weight;
+    if (!weight) return null;
+
+    // Finde den passenden Wiederholungsbereich basierend auf dem Gewicht
+    // Toleranz von ±2.5 kg für Rundungen
+    const tolerance = 2.5;
+
+    if (plan.weight3Reps && Math.abs(weight - plan.weight3Reps) <= tolerance) {
+        return '3er';
+    }
+    if (plan.weight6Reps && Math.abs(weight - plan.weight6Reps) <= tolerance) {
+        return '6er';
+    }
+    if (plan.weight10Reps && Math.abs(weight - plan.weight10Reps) <= tolerance) {
+        return '10er';
+    }
+
+    return null;
+}
+
+/**
+ * Prüft ob ein Training das Wiederholungsziel erreicht hat
+ * @param {Object} training - Das Training
+ * @returns {Object} { achieved: boolean, repRangeType: string|null, targetReps: number }
+ */
+function checkRepGoalAchieved(training) {
+    if (training.trainingType === 'time') {
+        return { achieved: false, repRangeType: null, targetReps: 0 };
+    }
+
+    const repRangeType = getRepRangeType(training);
+    if (!repRangeType) {
+        return { achieved: false, repRangeType: null, targetReps: 0 };
+    }
+
+    // Ziel-Wiederholungen pro Satz
+    const targetReps = repRangeType === '3er' ? 3 : repRangeType === '6er' ? 6 : 10;
+
+    // Prüfe ob alle Sätze das Ziel erreicht haben
+    const repsArray = Array.isArray(training.reps) ? training.reps : [training.reps];
+    const achieved = repsArray.every(rep => parseInt(rep) >= targetReps);
+
+    return { achieved, repRangeType, targetReps };
+}
+
 function displayTrainings() {
     let filteredTrainings = [...trainings];
 
@@ -656,6 +712,13 @@ function displayTrainings() {
                 ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
                 : parseInt(training.reps || 0);
 
+            // Prüfe ob Wiederholungsziel erreicht
+            const goalCheck = checkRepGoalAchieved(training);
+            const achievedClass = goalCheck.achieved ? 'goal-achieved' : '';
+            const repRangeBadge = goalCheck.repRangeType
+                ? `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : ''}">${goalCheck.repRangeType}</span>`
+                : '';
+
             // Gewicht oder Zeit anzeigen
             let valueDisplay = '';
             if (training.trainingType === 'time') {
@@ -672,9 +735,9 @@ function displayTrainings() {
             }
 
             return `
-                <div class="training-item">
+                <div class="training-item ${achievedClass}">
                     <div class="training-info">
-                        <h3>${training.exercise}</h3>
+                        <h3>${training.exercise} ${repRangeBadge}</h3>
                         <div class="training-details">
                             <div class="detail-item">
                                 <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
@@ -1634,7 +1697,25 @@ function displayStrengthIndex(exercise) {
     const trendArrow = status.trend > 0.02 ? '↑' : status.trend < -0.02 ? '↓' : '→';
     const trendPercent = (status.trend * 100).toFixed(1);
 
+    // Wöchentlicher Fortschritt
+    const weeklyProgress = status.weeklyProgress;
+    const weekProgressHTML = weeklyProgress ? `
+        <div class="weekly-progress-section">
+            <h4>Wochenziel (3er/6er/10er)</h4>
+            <div class="weekly-progress-badges">
+                <span class="week-badge ${weeklyProgress.has3er ? 'completed' : 'pending'}">3er ${weeklyProgress.has3er ? '✓' : '○'}</span>
+                <span class="week-badge ${weeklyProgress.has6er ? 'completed' : 'pending'}">6er ${weeklyProgress.has6er ? '✓' : '○'}</span>
+                <span class="week-badge ${weeklyProgress.has10er ? 'completed' : 'pending'}">10er ${weeklyProgress.has10er ? '✓' : '○'}</span>
+            </div>
+            <div class="weekly-progress-bar">
+                <div class="progress-fill" style="width: ${(weeklyProgress.completedRanges / 3) * 100}%"></div>
+            </div>
+            <span class="weekly-progress-text">${weeklyProgress.completedRanges}/3 Bereiche diese Woche</span>
+        </div>
+    ` : '';
+
     statusContainer.innerHTML = `
+        ${weekProgressHTML}
         <div class="strength-status-grid">
             <div class="strength-stat-card">
                 <div class="strength-stat-label">Aktueller e1RM</div>
@@ -1662,28 +1743,37 @@ function displayStrengthIndex(exercise) {
 
     // Empfehlung
     if (recommendation) {
+        // Zeige Empfehlung für nächsten Rep-Range basierend auf Wochenfortschritt
+        const nextRange = recommendation.nextRecommendedRange || '6er';
+        const repRangeWeights = recommendation.repRangeWeights || {};
+
         recommendationContainer.innerHTML = `
             <div class="recommendation-card">
                 <h4>💡 Trainingsempfehlung</h4>
                 <p class="recommendation-text">${recommendation.recommendation}</p>
-                <div class="recommendation-weights">
-                    <div class="weight-suggestion">
-                        <span class="weight-label">Leicht</span>
-                        <span class="weight-value">${recommendation.weights.light} kg</span>
-                    </div>
-                    <div class="weight-suggestion target">
-                        <span class="weight-label">Ziel</span>
-                        <span class="weight-value">${recommendation.weights.target} kg</span>
-                    </div>
-                    <div class="weight-suggestion">
-                        <span class="weight-label">Schwer</span>
-                        <span class="weight-value">${recommendation.weights.heavy} kg</span>
-                    </div>
+
+                <div class="next-training-highlight">
+                    <span class="next-label">Nächstes Training:</span>
+                    <span class="next-range-badge">${nextRange}</span>
+                    <span class="next-weight">${recommendation.nextRangeWeight} kg × ${recommendation.nextRangeSets}×${recommendation.nextRangeReps}</span>
                 </div>
-                <div class="recommendation-sets-reps">
-                    <span>${recommendation.sets.min}-${recommendation.sets.max} Sätze</span>
-                    <span>×</span>
-                    <span>${recommendation.reps.min}-${recommendation.reps.max} Wdh.</span>
+
+                <div class="rep-range-weights-grid">
+                    <div class="rep-range-weight-card ${nextRange === '3er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has3er ? 'completed' : ''}">
+                        <span class="range-label">3er</span>
+                        <span class="range-weight">${repRangeWeights['3er'] ? repRangeWeights['3er'].weight : recommendation.weights.heavy} kg</span>
+                        <span class="range-detail">4×3 (90%)</span>
+                    </div>
+                    <div class="rep-range-weight-card ${nextRange === '6er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has6er ? 'completed' : ''}">
+                        <span class="range-label">6er</span>
+                        <span class="range-weight">${repRangeWeights['6er'] ? repRangeWeights['6er'].weight : recommendation.weights.target} kg</span>
+                        <span class="range-detail">4×6 (80%)</span>
+                    </div>
+                    <div class="rep-range-weight-card ${nextRange === '10er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has10er ? 'completed' : ''}">
+                        <span class="range-label">10er</span>
+                        <span class="range-weight">${repRangeWeights['10er'] ? repRangeWeights['10er'].weight : recommendation.weights.light} kg</span>
+                        <span class="range-detail">4×10 (70%)</span>
+                    </div>
                 </div>
             </div>
         `;

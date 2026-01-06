@@ -17,6 +17,7 @@
  * @property {number} [rpe] - Rate of Perceived Exertion (6-10), optional
  * @property {string} date - ISO-Datum (YYYY-MM-DD)
  * @property {number} [timestamp] - Unix-Timestamp
+ * @property {string} [repRange] - '3er' | '6er' | '10er' - Wiederholungsbereich basierend auf Plan
  */
 
 /**
@@ -28,6 +29,7 @@
  * @property {number} volumeLoad - Gesamtvolumen (Gewicht × Wiederholungen)
  * @property {number} setCount - Anzahl der Sätze
  * @property {number} score - Kombinierter Session-Score
+ * @property {string} [repRange] - '3er' | '6er' | '10er' - Wiederholungsbereich dieser Session
  */
 
 /**
@@ -39,6 +41,16 @@
  * @property {string} status - 'improving' | 'maintaining' | 'declining' | 'peaking' | 'recovering'
  * @property {string} recommendation - Trainingsempfehlung
  * @property {number} readinessScore - Bereitschafts-Score (0-100)
+ * @property {Object} [repRangeBreakdown] - Aufschlüsselung nach Wiederholungsbereichen
+ */
+
+/**
+ * @typedef {Object} WeeklyProgress
+ * @property {boolean} has3er - Hat 3er-Training diese Woche
+ * @property {boolean} has6er - Hat 6er-Training diese Woche
+ * @property {boolean} has10er - Hat 10er-Training diese Woche
+ * @property {number} completedRanges - Anzahl absolvierter Bereiche (0-3)
+ * @property {string[]} missingRanges - Fehlende Bereiche
  */
 
 /**
@@ -57,6 +69,72 @@ const EMA_ALPHA_LONG = 0.1;   // Langsamer EMA (Langzeit-Trend)
 const TREND_THRESHOLD = 0.02; // 2% Änderung für Trend-Erkennung
 const RECOVERY_DAYS = 2;      // Minimale Erholungstage zwischen Sessions
 const PEAK_THRESHOLD = 1.05;  // 5% über Langzeit-EMA = Peak
+const WEIGHT_TOLERANCE = 2.5; // Toleranz für Gewichtsvergleich mit Plan (±2.5 kg)
+
+// ========================================
+// HILFSFUNKTIONEN FÜR REP-RANGE ERKENNUNG
+// ========================================
+
+/**
+ * Ermittelt den Wiederholungsbereich basierend auf dem Plan
+ * @param {string} exercise - Name der Übung
+ * @param {number} weight - Verwendetes Gewicht
+ * @returns {string|null} '3er' | '6er' | '10er' | null
+ */
+function getRepRangeFromPlan(exercise, weight) {
+    // Zugriff auf trainingPlans aus app.js (globale Variable)
+    if (typeof trainingPlans === 'undefined' || !trainingPlans) return null;
+
+    const plan = trainingPlans.find(p => p.exercise === exercise);
+    if (!plan) return null;
+
+    // Finde passenden Bereich mit Toleranz
+    if (plan.weight3Reps && Math.abs(weight - plan.weight3Reps) <= WEIGHT_TOLERANCE) {
+        return '3er';
+    }
+    if (plan.weight6Reps && Math.abs(weight - plan.weight6Reps) <= WEIGHT_TOLERANCE) {
+        return '6er';
+    }
+    if (plan.weight10Reps && Math.abs(weight - plan.weight10Reps) <= WEIGHT_TOLERANCE) {
+        return '10er';
+    }
+
+    return null;
+}
+
+/**
+ * Berechnet die Kalenderwoche (ISO-Format)
+ * @param {Date} date
+ * @returns {string} Format: 'YYYY-WXX'
+ */
+function getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+/**
+ * Gibt Start und Ende der aktuellen Kalenderwoche zurück
+ * @returns {{start: Date, end: Date}}
+ */
+function getCurrentWeekRange() {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    return { start: monday, end: sunday };
+}
 
 // ========================================
 // E1RM FORMELN
@@ -224,11 +302,15 @@ class StrengthIndex {
                 const repCount = parseInt(reps) || 0;
 
                 if (weight > 0 && repCount > 0) {
+                    // Rep-Range basierend auf Plan ermitteln
+                    const repRange = getRepRangeFromPlan(t.exercise, weight);
+
                     sets.push({
                         exercise: t.exercise,
                         weight: weight,
                         reps: repCount,
-                        date: t.date
+                        date: t.date,
+                        repRange: repRange
                     });
                 }
             });
@@ -254,6 +336,7 @@ class StrengthIndex {
 
     /**
      * Berechnet den Session-Score für eine Übung an einem Tag
+     * Berücksichtigt das 3er/6er/10er Trainingsschema
      * @param {string} exercise
      * @param {string} date
      */
@@ -262,6 +345,20 @@ class StrengthIndex {
         const daySets = sets.filter(s => s.date === date);
 
         if (daySets.length === 0) return;
+
+        // Rep-Range dieser Session ermitteln (der häufigste Rep-Range an diesem Tag)
+        const repRangeCounts = { '3er': 0, '6er': 0, '10er': 0, 'other': 0 };
+        daySets.forEach(s => {
+            if (s.repRange) {
+                repRangeCounts[s.repRange]++;
+            } else {
+                repRangeCounts['other']++;
+            }
+        });
+        const dominantRepRange = Object.entries(repRangeCounts)
+            .filter(([key]) => key !== 'other')
+            .sort((a, b) => b[1] - a[1])[0];
+        const sessionRepRange = dominantRepRange && dominantRepRange[1] > 0 ? dominantRepRange[0] : null;
 
         // e1RM für jeden Satz berechnen
         const e1rms = daySets.map(s => calculateE1RM(s.weight, s.reps, s.rpe));
@@ -272,10 +369,28 @@ class StrengthIndex {
         const volumeLoad = daySets.reduce((sum, s) => sum + (s.weight * s.reps), 0);
         const setCount = daySets.length;
 
-        // Kombinierter Score
-        // Gewichtung: 60% Max e1RM, 25% Avg e1RM, 15% Volumen-Faktor
-        const volumeFactor = Math.min(volumeLoad / (e1rmMax * 10), 2); // Normalisiert
-        const score = (e1rmMax * 0.6) + (e1rmAvg * 0.25) + (e1rmMax * volumeFactor * 0.15);
+        // Angepasste Gewichtung basierend auf Rep-Range
+        // 3er: Mehr Gewicht auf Max e1RM (Kraftfokus)
+        // 6er: Ausgeglichene Gewichtung (Hypertrophie-Kraft)
+        // 10er: Mehr Gewicht auf Volumen (Hypertrophie)
+        let maxWeight, avgWeight, volWeight;
+        switch (sessionRepRange) {
+            case '3er':
+                maxWeight = 0.70; avgWeight = 0.20; volWeight = 0.10;
+                break;
+            case '6er':
+                maxWeight = 0.55; avgWeight = 0.30; volWeight = 0.15;
+                break;
+            case '10er':
+                maxWeight = 0.45; avgWeight = 0.25; volWeight = 0.30;
+                break;
+            default:
+                maxWeight = 0.60; avgWeight = 0.25; volWeight = 0.15;
+        }
+
+        // Kombinierter Score mit angepasster Gewichtung
+        const volumeFactor = Math.min(volumeLoad / (e1rmMax * 10), 2);
+        const score = (e1rmMax * maxWeight) + (e1rmAvg * avgWeight) + (e1rmMax * volumeFactor * volWeight);
 
         const sessionScore = {
             exercise,
@@ -284,7 +399,8 @@ class StrengthIndex {
             e1rmAvg: Math.round(e1rmAvg * 10) / 10,
             volumeLoad: Math.round(volumeLoad),
             setCount,
-            score: Math.round(score * 10) / 10
+            score: Math.round(score * 10) / 10,
+            repRange: sessionRepRange
         };
 
         // Speichern (ersetze existierenden Score für dieses Datum)
@@ -436,6 +552,10 @@ class StrengthIndex {
             recommendation = `Nur ${daysSinceLastSession} Tag(e) seit dem letzten Training. ` + recommendation;
         }
 
+        // Rep-Range Breakdown hinzufügen
+        const repRangeBreakdown = this.getRepRangeBreakdown ? this.getRepRangeBreakdown(exercise) : null;
+        const weeklyProgress = this.getWeeklyProgress ? this.getWeeklyProgress(exercise) : null;
+
         return {
             exercise,
             currentE1RM,
@@ -443,12 +563,15 @@ class StrengthIndex {
             trend,
             status,
             recommendation,
-            readinessScore
+            readinessScore,
+            repRangeBreakdown,
+            weeklyProgress
         };
     }
 
     /**
      * Gibt Trainingsempfehlung mit konkreten Gewichten
+     * Angepasst für das 3er/6er/10er Schema
      * @param {string} exercise
      * @returns {Object | null}
      */
@@ -457,57 +580,55 @@ class StrengthIndex {
         if (!status) return null;
 
         const e1rm = status.currentE1RM;
+        const roundTo2_5 = (weight) => Math.round(weight / 2.5) * 2.5;
 
-        // Empfohlene Intensitätszonen basierend auf Status
-        let intensityRange;
-        let repRange;
-        let setRange;
+        // Hole wöchentlichen Fortschritt
+        const weeklyProgress = status.weeklyProgress || this.getWeeklyProgress(exercise);
+        const nextRangeRec = this.getNextRepRangeRecommendation(exercise);
 
-        switch (status.status) {
-            case 'peaking':
-                intensityRange = { min: 0.90, max: 1.0 };
-                repRange = { min: 1, max: 3 };
-                setRange = { min: 3, max: 5 };
-                break;
-            case 'improving':
-                intensityRange = { min: 0.75, max: 0.85 };
-                repRange = { min: 4, max: 8 };
-                setRange = { min: 3, max: 5 };
-                break;
-            case 'declining':
-                intensityRange = { min: 0.60, max: 0.70 };
-                repRange = { min: 8, max: 12 };
-                setRange = { min: 2, max: 3 };
-                break;
-            case 'recovering':
-                intensityRange = { min: 0.70, max: 0.80 };
-                repRange = { min: 5, max: 8 };
-                setRange = { min: 3, max: 4 };
-                break;
-            default: // maintaining
-                intensityRange = { min: 0.72, max: 0.82 };
-                repRange = { min: 5, max: 8 };
-                setRange = { min: 4, max: 5 };
+        // Basis-Empfehlung aus dem nächsten Rep-Range
+        let recommendation = status.recommendation;
+        let targetRange = nextRangeRec ? nextRangeRec.recommendedRange : '6er';
+
+        // Erweitere Empfehlung mit wöchentlichem Fortschritt
+        if (weeklyProgress && weeklyProgress.completedRanges < 3) {
+            recommendation += ` ${nextRangeRec ? nextRangeRec.reason : ''}`;
         }
 
-        // Gewichte berechnen (auf 2.5 kg runden)
-        const roundTo2_5 = (weight) => Math.round(weight / 2.5) * 2.5;
+        // Berechne Gewichte für alle drei Rep-Ranges
+        const weights3er = roundTo2_5(e1rm * 0.90);  // 90% für 3er
+        const weights6er = roundTo2_5(e1rm * 0.80);  // 80% für 6er
+        const weights10er = roundTo2_5(e1rm * 0.70); // 70% für 10er
 
         return {
             exercise,
             status: status.status,
             readinessScore: status.readinessScore,
-            recommendation: status.recommendation,
+            recommendation,
+            // Klassische Gewichtsempfehlung
             weights: {
-                light: roundTo2_5(e1rm * intensityRange.min),
-                target: roundTo2_5(e1rm * (intensityRange.min + intensityRange.max) / 2),
-                heavy: roundTo2_5(e1rm * intensityRange.max)
+                light: weights10er,
+                target: weights6er,
+                heavy: weights3er
             },
-            reps: repRange,
-            sets: setRange,
+            // Spezifische Empfehlungen pro Rep-Range
+            repRangeWeights: {
+                '3er': { weight: weights3er, reps: 3, sets: 4, intensity: '90%' },
+                '6er': { weight: weights6er, reps: 6, sets: 4, intensity: '80%' },
+                '10er': { weight: weights10er, reps: 10, sets: 4, intensity: '70%' }
+            },
+            // Empfohlener nächster Rep-Range
+            nextRecommendedRange: targetRange,
+            nextRangeWeight: nextRangeRec ? nextRangeRec.targetWeight : weights6er,
+            nextRangeReps: nextRangeRec ? nextRangeRec.reps : 6,
+            nextRangeSets: nextRangeRec ? nextRangeRec.sets : 4,
+            // Legacy-Felder für Kompatibilität
+            reps: { min: 3, max: 10 },
+            sets: { min: 4, max: 4 },
             e1rm: e1rm,
             strengthIndex: status.strengthIndex,
-            trend: status.trend
+            trend: status.trend,
+            weeklyProgress
         };
     }
 
@@ -520,6 +641,171 @@ class StrengthIndex {
         return exercises
             .map(ex => this.getStrengthStatus(ex))
             .filter(s => s !== null);
+    }
+
+    // ========================================
+    // WÖCHENTLICHES 3er/6er/10er SCHEMA
+    // ========================================
+
+    /**
+     * Ermittelt den wöchentlichen Trainingsfortschritt für das 3er/6er/10er Schema
+     * @param {string} exercise
+     * @returns {WeeklyProgress}
+     */
+    getWeeklyProgress(exercise) {
+        const scores = this.sessionScores.get(exercise) || [];
+        const weekRange = getCurrentWeekRange();
+
+        // Finde alle Sessions dieser Woche
+        const weekSessions = scores.filter(s => {
+            const sessionDate = new Date(s.date);
+            return sessionDate >= weekRange.start && sessionDate <= weekRange.end;
+        });
+
+        // Prüfe welche Rep-Ranges diese Woche absolviert wurden
+        const completedRanges = new Set(
+            weekSessions.map(s => s.repRange).filter(r => r !== null)
+        );
+
+        const has3er = completedRanges.has('3er');
+        const has6er = completedRanges.has('6er');
+        const has10er = completedRanges.has('10er');
+
+        const missingRanges = [];
+        if (!has3er) missingRanges.push('3er');
+        if (!has6er) missingRanges.push('6er');
+        if (!has10er) missingRanges.push('10er');
+
+        return {
+            has3er,
+            has6er,
+            has10er,
+            completedRanges: completedRanges.size,
+            missingRanges,
+            weekSessions
+        };
+    }
+
+    /**
+     * Gibt eine Empfehlung für den nächsten Wiederholungsbereich
+     * basierend auf dem wöchentlichen Fortschritt
+     * @param {string} exercise
+     * @returns {Object}
+     */
+    getNextRepRangeRecommendation(exercise) {
+        const progress = this.getWeeklyProgress(exercise);
+        const status = this.getStrengthStatus(exercise);
+
+        if (!status) return null;
+
+        const e1rm = status.currentE1RM;
+
+        // Bestimme den empfohlenen nächsten Rep-Range
+        let recommendedRange;
+        let reason;
+
+        if (progress.completedRanges === 3) {
+            // Alle Bereiche diese Woche absolviert
+            recommendedRange = '6er'; // Standard-Empfehlung
+            reason = 'Alle Bereiche diese Woche absolviert! Nächste Woche startet neu.';
+        } else if (progress.missingRanges.length === 1) {
+            // Nur noch ein Bereich fehlt
+            recommendedRange = progress.missingRanges[0];
+            reason = `Noch ${recommendedRange}-Training offen für diese Woche.`;
+        } else if (progress.missingRanges.length === 2) {
+            // Zwei Bereiche fehlen - wähle basierend auf Reihenfolge (3er → 6er → 10er)
+            const order = ['3er', '6er', '10er'];
+            recommendedRange = order.find(r => progress.missingRanges.includes(r));
+            reason = `${recommendedRange}-Training empfohlen. Noch ${progress.missingRanges.join(' und ')} offen.`;
+        } else {
+            // Alle drei fehlen - starte mit 3er
+            recommendedRange = '3er';
+            reason = 'Neue Woche - starte mit dem 3er-Training für maximale Kraft.';
+        }
+
+        // Berechne empfohlene Gewichte für den Rep-Range
+        const roundTo2_5 = (weight) => Math.round(weight / 2.5) * 2.5;
+        let targetWeight, reps, sets;
+
+        switch (recommendedRange) {
+            case '3er':
+                // 3er: ~90% e1RM für 3 Wiederholungen
+                targetWeight = roundTo2_5(e1rm * 0.90);
+                reps = 3;
+                sets = 4;
+                break;
+            case '6er':
+                // 6er: ~80% e1RM für 6 Wiederholungen
+                targetWeight = roundTo2_5(e1rm * 0.80);
+                reps = 6;
+                sets = 4;
+                break;
+            case '10er':
+                // 10er: ~70% e1RM für 10 Wiederholungen
+                targetWeight = roundTo2_5(e1rm * 0.70);
+                reps = 10;
+                sets = 4;
+                break;
+        }
+
+        return {
+            exercise,
+            recommendedRange,
+            reason,
+            targetWeight,
+            reps,
+            sets,
+            e1rm,
+            weeklyProgress: progress
+        };
+    }
+
+    /**
+     * Gibt eine detaillierte Aufschlüsselung nach Rep-Ranges zurück
+     * @param {string} exercise
+     * @returns {Object}
+     */
+    getRepRangeBreakdown(exercise) {
+        const scores = this.sessionScores.get(exercise) || [];
+
+        // Gruppiere Sessions nach Rep-Range
+        const breakdown = {
+            '3er': { sessions: [], avgE1RM: 0, trend: 0 },
+            '6er': { sessions: [], avgE1RM: 0, trend: 0 },
+            '10er': { sessions: [], avgE1RM: 0, trend: 0 }
+        };
+
+        scores.forEach(s => {
+            if (s.repRange && breakdown[s.repRange]) {
+                breakdown[s.repRange].sessions.push(s);
+            }
+        });
+
+        // Berechne Durchschnitt und Trend für jeden Bereich
+        Object.keys(breakdown).forEach(range => {
+            const sessions = breakdown[range].sessions;
+            if (sessions.length > 0) {
+                breakdown[range].avgE1RM = Math.round(
+                    sessions.reduce((sum, s) => sum + s.e1rmMax, 0) / sessions.length * 10
+                ) / 10;
+
+                // Trend: Vergleiche letzte 3 Sessions mit vorherigen 3
+                if (sessions.length >= 2) {
+                    const recent = sessions.slice(-3);
+                    const earlier = sessions.slice(-6, -3);
+                    if (earlier.length > 0) {
+                        const recentAvg = recent.reduce((sum, s) => sum + s.e1rmMax, 0) / recent.length;
+                        const earlierAvg = earlier.reduce((sum, s) => sum + s.e1rmMax, 0) / earlier.length;
+                        breakdown[range].trend = Math.round((recentAvg / earlierAvg - 1) * 100) / 100;
+                    }
+                }
+
+                breakdown[range].count = sessions.length;
+                breakdown[range].lastSession = sessions[sessions.length - 1];
+            }
+        });
+
+        return breakdown;
     }
 
     // ========================================

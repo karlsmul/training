@@ -591,13 +591,43 @@ select:focus {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 15px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background 0.2s;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .training-item:hover {
     transform: translateX(5px);
     box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* Training mit erreichtem Wiederholungsziel */
+.training-item.goal-achieved {
+    border-left-color: #6bcf7f;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+}
+
+.training-item.goal-achieved:hover {
+    box-shadow: 0 3px 12px rgba(107, 207, 127, 0.2);
+}
+
+/* Rep Range Badge */
+.rep-range-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+    background: #f0f0f0;
+    color: #666;
+    vertical-align: middle;
+}
+
+.rep-range-badge.achieved {
+    background: linear-gradient(135deg, #6bcf7f 0%, #4ade80 100%);
+    color: white;
 }
 
 .training-info h3 {
@@ -1650,6 +1680,166 @@ select:focus {
     font-size: 1rem;
     color: #666;
     font-weight: 500;
+}
+
+/* Weekly Progress Section (3er/6er/10er Schema) */
+.weekly-progress-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.weekly-progress-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    color: #333;
+    font-weight: 600;
+}
+
+.weekly-progress-badges {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.week-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.week-badge.completed {
+    background: linear-gradient(135deg, #6bcf7f 0%, #4ade80 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(107, 207, 127, 0.3);
+}
+
+.week-badge.pending {
+    background: #e9ecef;
+    color: #666;
+    border: 1px dashed #ccc;
+}
+
+.weekly-progress-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.weekly-progress-bar .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6bcf7f 0%, #4ade80 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.weekly-progress-text {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Next Training Highlight */
+.next-training-highlight {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+    border-radius: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.next-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.next-range-badge {
+    padding: 4px 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.next-weight {
+    font-weight: 700;
+    color: #333;
+    font-size: 1rem;
+}
+
+/* Rep Range Weights Grid */
+.rep-range-weights-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.rep-range-weight-card {
+    text-align: center;
+    padding: 12px 8px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.rep-range-weight-card.recommended {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea10 0%, #764ba210 100%);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.rep-range-weight-card.completed {
+    border-color: #6bcf7f;
+    background: linear-gradient(135deg, #f0fff4 0%, #dcfce7 100%);
+}
+
+.rep-range-weight-card.completed.recommended {
+    border-color: #6bcf7f;
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+}
+
+.rep-range-weight-card .range-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.rep-range-weight-card .range-weight {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 2px;
+}
+
+.rep-range-weight-card .range-detail {
+    display: block;
+    font-size: 0.7rem;
+    color: #999;
+}
+
+.rep-range-weight-card.recommended .range-label {
+    color: #667eea;
+}
+
+.rep-range-weight-card.completed .range-label::after {
+    content: ' ✓';
+    color: #6bcf7f;
 }
 
 /* Settings Section */
