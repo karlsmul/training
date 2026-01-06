@@ -206,34 +206,46 @@ class StrengthIndex {
      * @param {Array} trainings - Array von Training-Objekten aus app.js
      */
     importFromTrainings(trainings) {
+        console.log('Strength Index: Importiere', trainings.length, 'Trainings');
         const sets = [];
 
         trainings.forEach(t => {
-            // Nur Gewichtstraining
+            // Nur Gewichtstraining (Zeit-Trainings überspringen)
             if (t.trainingType === 'time') return;
+
+            // Überspringe wenn kein Gewicht vorhanden
+            if (!t.weight && !t.weightsPerSet) return;
 
             const repsArray = Array.isArray(t.reps) ? t.reps : [t.reps];
             const weightsArray = t.weightsPerSet || repsArray.map(() => t.weight);
 
             repsArray.forEach((reps, index) => {
-                const weight = weightsArray[index] || t.weight;
-                if (weight > 0 && reps > 0) {
+                const weight = parseFloat(weightsArray[index]) || parseFloat(t.weight) || 0;
+                const repCount = parseInt(reps) || 0;
+
+                if (weight > 0 && repCount > 0) {
                     sets.push({
                         exercise: t.exercise,
-                        weight: parseFloat(weight),
-                        reps: parseInt(reps),
+                        weight: weight,
+                        reps: repCount,
                         date: t.date
                     });
                 }
             });
         });
 
+        console.log('Strength Index: Erstelle', sets.length, 'Sets aus Trainings');
+
         // Bestehende Daten löschen und neu importieren
         this.workoutSets.clear();
         this.sessionScores.clear();
         this.emaData.clear();
 
-        this.addWorkoutSets(sets);
+        if (sets.length > 0) {
+            this.addWorkoutSets(sets);
+        }
+
+        console.log('Strength Index: Übungen verfügbar:', this.getExercises());
     }
 
     // ========================================
