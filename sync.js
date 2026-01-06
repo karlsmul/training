@@ -227,6 +227,11 @@ async function syncFromCloud() {
         populateTotalRepsExerciseDropdown();
     }
 
+    // Strength Index nach Cloud-Sync aktualisieren
+    if (typeof initStrengthIndex === 'function') {
+        initStrengthIndex();
+    }
+
     lastSyncTime = new Date();
     updateSyncStatus('synced', `Zuletzt synchronisiert: ${formatTime(lastSyncTime)}`);
 
@@ -475,6 +480,11 @@ function manualUpdateUI() {
   // Aktualisiere auch das Gesamtwiederholungen-Dropdown falls es existiert
   if (typeof populateTotalRepsExerciseDropdown === 'function') {
       populateTotalRepsExerciseDropdown();
+  }
+
+  // Strength Index aktualisieren
+  if (typeof initStrengthIndex === 'function') {
+      initStrengthIndex();
   }
 
   // Reset update indicator

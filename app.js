@@ -2250,6 +2250,7 @@ window.displayBodyWeightHistory = displayBodyWeightHistory;
 window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
 window.populateTotalRepsExerciseDropdown = populateTotalRepsExerciseDropdown;
+window.initStrengthIndex = initStrengthIndex;
 
 // ========================================
 // APP INITIALISIERUNG
