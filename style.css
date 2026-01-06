@@ -1471,6 +1471,187 @@ select:focus {
     margin-top: 2px;
 }
 
+/* Strength Index Section */
+.strength-index-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.strength-index-section h3 {
+    background: linear-gradient(90deg, #667eea 0%, #00d4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+.strength-exercise-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.strength-exercise-selector label {
+    font-weight: 600;
+    color: #333;
+}
+
+.strength-exercise-selector select {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    color: #333;
+    cursor: pointer;
+}
+
+.strength-exercise-selector select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.strength-status-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.strength-stat-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.strength-stat-label {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.strength-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.strength-stat-value .unit {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #666;
+}
+
+.strength-stat-value.trend-up {
+    color: #6bcf7f;
+}
+
+.strength-stat-value.trend-down {
+    color: #ff6b6b;
+}
+
+.strength-stat-value.trend-stable {
+    color: #ffd93d;
+}
+
+.strength-status-badge {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 2px solid;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.strength-chart-container {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 15px 0;
+}
+
+.strength-chart-container canvas {
+    max-height: 250px;
+}
+
+.recommendation-card {
+    background: linear-gradient(135deg, #667eea15 0%, #00d4ff15 100%);
+    border: 1px solid #667eea30;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.recommendation-card h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.recommendation-text {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.recommendation-weights {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.weight-suggestion {
+    text-align: center;
+    padding: 12px 15px;
+    background: white;
+    border-radius: 10px;
+    flex: 1;
+}
+
+.weight-suggestion.target {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.weight-suggestion .weight-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    opacity: 0.8;
+}
+
+.weight-suggestion .weight-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.weight-suggestion.target .weight-label {
+    color: rgba(255,255,255,0.9);
+}
+
+.recommendation-sets-reps {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    font-size: 1rem;
+    color: #666;
+    font-weight: 500;
+}
+
 /* Settings Section */
 .settings-section {
     background: #f8f9fa;

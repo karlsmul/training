@@ -260,6 +260,31 @@
                             <!-- Wird dynamisch gefüllt -->
                         </div>
                     </div>
+
+                    <!-- Strength Index Section -->
+                    <div class="strength-index-section">
+                        <h3>Strength Index</h3>
+                        <p class="section-subtitle">e1RM-basierte Leistungsanalyse mit Trainingsempfehlungen</p>
+
+                        <div class="strength-exercise-selector">
+                            <label for="strengthExercise">Übung:</label>
+                            <select id="strengthExercise">
+                                <option value="">Übung wählen...</option>
+                            </select>
+                        </div>
+
+                        <div id="strengthStatusContainer" class="strength-status-container">
+                            <!-- Wird dynamisch gefüllt -->
+                        </div>
+
+                        <div id="strengthChartContainer" class="strength-chart-container">
+                            <canvas id="strengthChart"></canvas>
+                        </div>
+
+                        <div id="strengthRecommendation" class="strength-recommendation">
+                            <!-- Wird dynamisch gefüllt -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Settings Tab -->
@@ -361,11 +386,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=16"></script>
-    <script src="sync.js?v=16"></script>
+    <script src="firebase-config.js?v=17"></script>
+    <script src="sync.js?v=17"></script>
+
+    <!-- Strength Index System -->
+    <script src="strength-index.js?v=17"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -377,7 +405,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v16') {
+                        if (cacheName !== 'krafttraining-v17') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }

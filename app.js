@@ -1475,7 +1475,7 @@ function displayTrainingVolume() {
     });
 }
 
-function createVolumeChart(canvasId, percent, label) {
+function createVolumeChart(canvasId, percent) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
 
@@ -1538,6 +1538,254 @@ function createVolumeChart(canvasId, percent, label) {
 // Für Kompatibilität mit sync.js
 function populateTotalRepsExerciseDropdown() {
     displayTrainingVolume();
+}
+
+// ========================================
+// STRENGTH INDEX UI
+// ========================================
+
+let strengthChart = null;
+
+/**
+ * Initialisiert das Strength Index System mit bestehenden Trainingsdaten
+ */
+function initStrengthIndex() {
+    if (typeof strengthIndex === 'undefined') {
+        console.warn('Strength Index nicht geladen');
+        return;
+    }
+
+    // Importiere bestehende Trainings
+    strengthIndex.importFromTrainings(trainings);
+
+    // Dropdown befüllen
+    populateStrengthExerciseDropdown();
+
+    // Event-Listener für Dropdown
+    const dropdown = document.getElementById('strengthExercise');
+    if (dropdown && !dropdown.hasAttribute('data-listener-added')) {
+        dropdown.setAttribute('data-listener-added', 'true');
+        dropdown.addEventListener('change', function() {
+            displayStrengthIndex(this.value);
+        });
+    }
+}
+
+/**
+ * Befüllt das Übungs-Dropdown für Strength Index
+ */
+function populateStrengthExerciseDropdown() {
+    const dropdown = document.getElementById('strengthExercise');
+    if (!dropdown || typeof strengthIndex === 'undefined') return;
+
+    const exercises = strengthIndex.getExercises();
+    const currentValue = dropdown.value;
+
+    dropdown.innerHTML = '<option value="">Übung wählen...</option>' +
+        exercises.map(ex => `<option value="${ex}" ${ex === currentValue ? 'selected' : ''}>${ex}</option>`).join('');
+}
+
+/**
+ * Zeigt den Strength Index für eine Übung an
+ * @param {string} exercise
+ */
+function displayStrengthIndex(exercise) {
+    const statusContainer = document.getElementById('strengthStatusContainer');
+    const recommendationContainer = document.getElementById('strengthRecommendation');
+
+    if (!statusContainer || !recommendationContainer) return;
+
+    if (!exercise) {
+        statusContainer.innerHTML = '';
+        recommendationContainer.innerHTML = '';
+        if (strengthChart) {
+            strengthChart.destroy();
+            strengthChart = null;
+        }
+        return;
+    }
+
+    const status = strengthIndex.getStrengthStatus(exercise);
+    const recommendation = strengthIndex.getTrainingRecommendation(exercise);
+
+    if (!status) {
+        statusContainer.innerHTML = '<div class="empty-state"><p>Keine Daten für diese Übung.</p></div>';
+        recommendationContainer.innerHTML = '';
+        return;
+    }
+
+    // Status-Anzeige
+    const statusColors = {
+        'improving': '#6bcf7f',
+        'maintaining': '#ffd93d',
+        'declining': '#ff6b6b',
+        'peaking': '#00d4ff',
+        'recovering': '#ff9f43'
+    };
+
+    const statusLabels = {
+        'improving': '📈 Verbesserung',
+        'maintaining': '➡️ Stabil',
+        'declining': '📉 Rückgang',
+        'peaking': '🔥 Peak-Form',
+        'recovering': '🔄 Erholung'
+    };
+
+    const trendArrow = status.trend > 0.02 ? '↑' : status.trend < -0.02 ? '↓' : '→';
+    const trendPercent = (status.trend * 100).toFixed(1);
+
+    statusContainer.innerHTML = `
+        <div class="strength-status-grid">
+            <div class="strength-stat-card">
+                <div class="strength-stat-label">Aktueller e1RM</div>
+                <div class="strength-stat-value">${status.currentE1RM} <span class="unit">kg</span></div>
+            </div>
+            <div class="strength-stat-card">
+                <div class="strength-stat-label">Strength Index</div>
+                <div class="strength-stat-value">${status.strengthIndex}</div>
+            </div>
+            <div class="strength-stat-card">
+                <div class="strength-stat-label">Trend</div>
+                <div class="strength-stat-value trend-${status.trend > 0 ? 'up' : status.trend < 0 ? 'down' : 'stable'}">
+                    ${trendArrow} ${trendPercent}%
+                </div>
+            </div>
+            <div class="strength-stat-card">
+                <div class="strength-stat-label">Readiness</div>
+                <div class="strength-stat-value">${status.readinessScore}<span class="unit">%</span></div>
+            </div>
+        </div>
+        <div class="strength-status-badge" style="background: ${statusColors[status.status]}20; border-color: ${statusColors[status.status]}">
+            <span style="color: ${statusColors[status.status]}">${statusLabels[status.status]}</span>
+        </div>
+    `;
+
+    // Empfehlung
+    if (recommendation) {
+        recommendationContainer.innerHTML = `
+            <div class="recommendation-card">
+                <h4>💡 Trainingsempfehlung</h4>
+                <p class="recommendation-text">${recommendation.recommendation}</p>
+                <div class="recommendation-weights">
+                    <div class="weight-suggestion">
+                        <span class="weight-label">Leicht</span>
+                        <span class="weight-value">${recommendation.weights.light} kg</span>
+                    </div>
+                    <div class="weight-suggestion target">
+                        <span class="weight-label">Ziel</span>
+                        <span class="weight-value">${recommendation.weights.target} kg</span>
+                    </div>
+                    <div class="weight-suggestion">
+                        <span class="weight-label">Schwer</span>
+                        <span class="weight-value">${recommendation.weights.heavy} kg</span>
+                    </div>
+                </div>
+                <div class="recommendation-sets-reps">
+                    <span>${recommendation.sets.min}-${recommendation.sets.max} Sätze</span>
+                    <span>×</span>
+                    <span>${recommendation.reps.min}-${recommendation.reps.max} Wdh.</span>
+                </div>
+            </div>
+        `;
+    }
+
+    // Chart aktualisieren
+    updateStrengthChart(exercise);
+}
+
+/**
+ * Aktualisiert den Strength Index Chart
+ * @param {string} exercise
+ */
+function updateStrengthChart(exercise) {
+    const canvas = document.getElementById('strengthChart');
+    if (!canvas || typeof strengthIndex === 'undefined') return;
+
+    const history = strengthIndex.getHistory(exercise);
+
+    if (history.length < 2) {
+        canvas.parentElement.style.display = 'none';
+        return;
+    }
+
+    canvas.parentElement.style.display = 'block';
+
+    if (strengthChart) {
+        strengthChart.destroy();
+    }
+
+    const labels = history.map(h => {
+        const date = new Date(h.date);
+        return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' });
+    });
+
+    const strengthData = history.map(h => h.strengthIndex);
+    const e1rmData = history.map(h => h.e1rm);
+
+    const ctx = canvas.getContext('2d');
+    strengthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Strength Index',
+                    data: strengthData,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'e1RM (kg)',
+                    data: e1rmData,
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'transparent',
+                    tension: 0.4,
+                    borderDash: [5, 5],
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Strength Index'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'e1RM (kg)'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
 }
 
 // ========================================
@@ -1834,6 +2082,7 @@ tabButtons.forEach(button => {
             updatePersonalRecordsChart();
             updateBorgValueChart();
             displayTrainingVolume();
+            initStrengthIndex();
         }
 
         // Personal Records aktualisieren
