@@ -323,13 +323,18 @@ generateRepsInputs();
 // ========================================
 
 function populateExerciseDropdown() {
-    if (!exerciseSelect) return;
-
-    // WICHTIG: Immer frisch aus localStorage laden, um Race Conditions zu vermeiden
-    const storedExercises = JSON.parse(localStorage.getItem('exercises')) || [];
-    if (storedExercises.length > 0) {
-        exercises = storedExercises;
+    if (!exerciseSelect) {
+        console.warn('populateExerciseDropdown: exerciseSelect Element nicht gefunden');
+        return;
     }
+
+    // IMMER frisch aus localStorage laden - das ist die einzige Wahrheitsquelle
+    const storedExercises = JSON.parse(localStorage.getItem('exercises')) || [];
+
+    // Globale Variable aktualisieren (unabhängig davon ob leer oder nicht)
+    exercises = storedExercises;
+
+    console.log('populateExerciseDropdown: Lade', exercises.length, 'Übungen aus localStorage');
 
     const currentValue = exerciseSelect.value;
     exerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
@@ -1267,6 +1272,17 @@ exerciseForm.addEventListener('submit', function(e) {
 });
 
 function displayExerciseList() {
+    if (!exerciseList) {
+        console.warn('displayExerciseList: exerciseList Element nicht gefunden');
+        return;
+    }
+
+    // IMMER frisch aus localStorage laden
+    const storedExercises = JSON.parse(localStorage.getItem('exercises')) || [];
+    exercises = storedExercises;
+
+    console.log('displayExerciseList: Zeige', exercises.length, 'Übungen');
+
     if (exercises.length === 0) {
         exerciseList.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Übungen</p>';
         return;
