@@ -325,6 +325,12 @@ generateRepsInputs();
 function populateExerciseDropdown() {
     if (!exerciseSelect) return;
 
+    // WICHTIG: Immer frisch aus localStorage laden, um Race Conditions zu vermeiden
+    const storedExercises = JSON.parse(localStorage.getItem('exercises')) || [];
+    if (storedExercises.length > 0) {
+        exercises = storedExercises;
+    }
+
     const currentValue = exerciseSelect.value;
     exerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
 
@@ -357,6 +363,8 @@ function populateExerciseDropdown() {
             planExerciseSelect.value = planCurrentValue;
         }
     }
+
+    console.log('Übungs-Dropdowns gefüllt mit', exercises.length, 'Übungen');
 }
 
 // ========================================
@@ -639,13 +647,15 @@ function checkRepGoalAchieved(training) {
 let selectedHistoryDate = null;
 
 function populateHistoryDateDropdown() {
+    if (!historyDateSelect) return [];
+
     // Alle einzigartigen Trainingstage sammeln (neueste zuerst)
     const allDates = [...new Set(trainings.map(t => t.date))].sort((a, b) => new Date(b) - new Date(a));
 
     if (allDates.length === 0) {
         historyDateSelect.innerHTML = '<option value="">Keine Trainings</option>';
         selectedHistoryDate = null;
-        return;
+        return [];
     }
 
     // Dropdown befüllen
@@ -661,28 +671,24 @@ function populateHistoryDateDropdown() {
         return `<option value="${date}">${formattedDate} (${trainingsCount} Übungen)</option>`;
     }).join('');
 
-    // Wenn kein Datum ausgewählt ist, das neueste nehmen
+    // IMMER das neueste Datum als Standard setzen, wenn keins ausgewählt
+    // oder das ausgewählte Datum nicht mehr existiert
     if (!selectedHistoryDate || !allDates.includes(selectedHistoryDate)) {
-        selectedHistoryDate = allDates[0];
+        selectedHistoryDate = allDates[0]; // Neuestes Datum
     }
 
     historyDateSelect.value = selectedHistoryDate;
+    return allDates;
 }
 
 function displayTrainings() {
-    // Dropdown aktualisieren
-    populateHistoryDateDropdown();
+    if (!trainingList) return;
 
-    // Suchfilter anwenden
-    let filteredTrainings = [...trainings];
-    const searchTerm = searchInput.value.toLowerCase();
-    if (searchTerm) {
-        filteredTrainings = filteredTrainings.filter(training =>
-            training.exercise.toLowerCase().includes(searchTerm)
-        );
-    }
+    // Dropdown aktualisieren und verfügbare Daten holen
+    const allDates = populateHistoryDateDropdown();
 
-    if (filteredTrainings.length === 0) {
+    // Keine Trainings vorhanden
+    if (trainings.length === 0) {
         trainingList.innerHTML = `
             <div class="empty-state">
                 <p>Noch keine Trainingseinträge vorhanden.</p>
@@ -692,18 +698,32 @@ function displayTrainings() {
         return;
     }
 
-    // Nur Trainings des ausgewählten Tages anzeigen
-    const selectedDate = historyDateSelect.value || selectedHistoryDate;
-    if (!selectedDate) {
+    // Sicherstellen, dass ein Datum ausgewählt ist (immer das neueste als Fallback)
+    if (!selectedHistoryDate && allDates.length > 0) {
+        selectedHistoryDate = allDates[0];
+        if (historyDateSelect) {
+            historyDateSelect.value = selectedHistoryDate;
+        }
+    }
+
+    // Kein Datum verfügbar
+    if (!selectedHistoryDate) {
         trainingList.innerHTML = `
             <div class="empty-state">
-                <p>Wähle einen Trainingstag aus.</p>
+                <p>Keine Trainingstage verfügbar.</p>
             </div>
         `;
         return;
     }
 
-    const trainingsOfDay = filteredTrainings.filter(t => t.date === selectedDate);
+    // Suchfilter auf den ausgewählten Tag anwenden
+    let trainingsOfDay = trainings.filter(t => t.date === selectedHistoryDate);
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    if (searchTerm) {
+        trainingsOfDay = trainingsOfDay.filter(training =>
+            training.exercise.toLowerCase().includes(searchTerm)
+        );
+    }
 
     if (trainingsOfDay.length === 0) {
         trainingList.innerHTML = `
@@ -714,7 +734,7 @@ function displayTrainings() {
         return;
     }
 
-    const dateObj = new Date(selectedDate);
+    const dateObj = new Date(selectedHistoryDate);
     const formattedDate = dateObj.toLocaleDateString('de-DE', {
         weekday: 'long',
         day: '2-digit',
@@ -723,7 +743,7 @@ function displayTrainings() {
     });
 
     // Borg-Wert für diesen Tag laden
-    const dailyBorg = dailyBorgValues.find(b => b.date === selectedDate);
+    const dailyBorg = dailyBorgValues.find(b => b.date === selectedHistoryDate);
     const borgValue = dailyBorg ? dailyBorg.borgValue : null;
     const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
 
@@ -802,10 +822,10 @@ function displayTrainings() {
                 <label>Wie war das Training heute?</label>
                 <div class="borg-day-input">
                     <input type="range" min="1" max="10" value="${borgValue || 5}"
-                           onchange="saveDailyBorg('${selectedDate}', this.value)"
-                           oninput="updateBorgDisplay('${selectedDate}', this.value)"
+                           onchange="saveDailyBorg('${selectedHistoryDate}', this.value)"
+                           oninput="updateBorgDisplay('${selectedHistoryDate}', this.value)"
                            class="borg-slider">
-                    <span class="borg-display" id="borg-${selectedDate}" style="color: ${borgColor}">
+                    <span class="borg-display" id="borg-${selectedHistoryDate}" style="color: ${borgColor}">
                         ${borgValue ? borgValue + '/10' : '?/10'}
                     </span>
                 </div>
