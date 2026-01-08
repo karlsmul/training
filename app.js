@@ -212,7 +212,7 @@ const currentDateElement = document.getElementById('currentDate');
 const dateInput = document.getElementById('date');
 const clearHistoryBtn = document.getElementById('clearHistory');
 const searchInput = document.getElementById('searchExercise');
-const sortSelect = document.getElementById('sortBy');
+const historyDateSelect = document.getElementById('historyDateSelect');
 const recordsList = document.getElementById('recordsList');
 const formTitle = document.getElementById('formTitle');
 const submitBtn = document.getElementById('submitBtn');
@@ -635,29 +635,52 @@ function checkRepGoalAchieved(training) {
     return { achieved, repRangeType, targetReps };
 }
 
-function displayTrainings() {
-    let filteredTrainings = [...trainings];
+// Globale Variable für aktuell ausgewähltes Datum in der Historie
+let selectedHistoryDate = null;
 
+function populateHistoryDateDropdown() {
+    // Alle einzigartigen Trainingstage sammeln (neueste zuerst)
+    const allDates = [...new Set(trainings.map(t => t.date))].sort((a, b) => new Date(b) - new Date(a));
+
+    if (allDates.length === 0) {
+        historyDateSelect.innerHTML = '<option value="">Keine Trainings</option>';
+        selectedHistoryDate = null;
+        return;
+    }
+
+    // Dropdown befüllen
+    historyDateSelect.innerHTML = allDates.map(date => {
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('de-DE', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        const trainingsCount = trainings.filter(t => t.date === date).length;
+        return `<option value="${date}">${formattedDate} (${trainingsCount} Übungen)</option>`;
+    }).join('');
+
+    // Wenn kein Datum ausgewählt ist, das neueste nehmen
+    if (!selectedHistoryDate || !allDates.includes(selectedHistoryDate)) {
+        selectedHistoryDate = allDates[0];
+    }
+
+    historyDateSelect.value = selectedHistoryDate;
+}
+
+function displayTrainings() {
+    // Dropdown aktualisieren
+    populateHistoryDateDropdown();
+
+    // Suchfilter anwenden
+    let filteredTrainings = [...trainings];
     const searchTerm = searchInput.value.toLowerCase();
     if (searchTerm) {
         filteredTrainings = filteredTrainings.filter(training =>
             training.exercise.toLowerCase().includes(searchTerm)
         );
     }
-
-    const sortBy = sortSelect.value;
-    filteredTrainings.sort((a, b) => {
-        switch(sortBy) {
-            case 'date-desc':
-                return new Date(b.date) - new Date(a.date);
-            case 'date-asc':
-                return new Date(a.date) - new Date(b.date);
-            case 'exercise':
-                return a.exercise.localeCompare(b.exercise);
-            default:
-                return 0;
-        }
-    });
 
     if (filteredTrainings.length === 0) {
         trainingList.innerHTML = `
@@ -669,131 +692,136 @@ function displayTrainings() {
         return;
     }
 
-    // Trainings nach Datum gruppieren
-    const groupedByDate = {};
-    filteredTrainings.forEach(training => {
-        if (!groupedByDate[training.date]) {
-            groupedByDate[training.date] = [];
-        }
-        groupedByDate[training.date].push(training);
+    // Nur Trainings des ausgewählten Tages anzeigen
+    const selectedDate = historyDateSelect.value || selectedHistoryDate;
+    if (!selectedDate) {
+        trainingList.innerHTML = `
+            <div class="empty-state">
+                <p>Wähle einen Trainingstag aus.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const trainingsOfDay = filteredTrainings.filter(t => t.date === selectedDate);
+
+    if (trainingsOfDay.length === 0) {
+        trainingList.innerHTML = `
+            <div class="empty-state">
+                <p>Keine Übungen für diesen Tag gefunden.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const dateObj = new Date(selectedDate);
+    const formattedDate = dateObj.toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
     });
 
-    const sortedDates = Object.keys(groupedByDate).sort((a, b) => {
-        if (sortBy === 'date-asc') {
-            return new Date(a) - new Date(b);
-        }
-        return new Date(b) - new Date(a);
-    });
+    // Borg-Wert für diesen Tag laden
+    const dailyBorg = dailyBorgValues.find(b => b.date === selectedDate);
+    const borgValue = dailyBorg ? dailyBorg.borgValue : null;
+    const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
 
-    trainingList.innerHTML = sortedDates.map(date => {
-        const dateObj = new Date(date);
-        const formattedDate = dateObj.toLocaleDateString('de-DE', {
-            weekday: 'long',
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        });
+    const trainingsHTML = trainingsOfDay.map(training => {
+        // Reps anzeigen (mit Sicherheitscheck)
+        const repsDisplay = Array.isArray(training.reps)
+            ? training.reps.join(', ')
+            : training.reps || '0';
 
-        const trainingsOfDay = groupedByDate[date];
+        // Summe der Wiederholungen berechnen
+        const totalReps = Array.isArray(training.reps)
+            ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
+            : parseInt(training.reps || 0);
 
-        // Borg-Wert für diesen Tag laden
-        const dailyBorg = dailyBorgValues.find(b => b.date === date);
-        const borgValue = dailyBorg ? dailyBorg.borgValue : null;
-        const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
+        // Prüfe ob Wiederholungsziel erreicht
+        const goalCheck = checkRepGoalAchieved(training);
+        const achievedClass = goalCheck.achieved ? 'goal-achieved' : '';
+        const repRangeBadge = goalCheck.repRangeType
+            ? `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : ''}">${goalCheck.repRangeType}</span>`
+            : '';
 
-        const trainingsHTML = trainingsOfDay.map(training => {
-            // Reps anzeigen (mit Sicherheitscheck)
-            const repsDisplay = Array.isArray(training.reps)
-                ? training.reps.join(', ')
-                : training.reps || '0';
-
-            // Summe der Wiederholungen berechnen
-            const totalReps = Array.isArray(training.reps)
-                ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
-                : parseInt(training.reps || 0);
-
-            // Prüfe ob Wiederholungsziel erreicht
-            const goalCheck = checkRepGoalAchieved(training);
-            const achievedClass = goalCheck.achieved ? 'goal-achieved' : '';
-            const repRangeBadge = goalCheck.repRangeType
-                ? `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : ''}">${goalCheck.repRangeType}</span>`
-                : '';
-
-            // Gewicht oder Zeit anzeigen
-            let valueDisplay = '';
-            if (training.trainingType === 'time') {
-                const mins = training.timeMinutes || 0;
-                const secs = training.timeSeconds || 0;
-                valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
+        // Gewicht oder Zeit anzeigen
+        let valueDisplay = '';
+        if (training.trainingType === 'time') {
+            const mins = training.timeMinutes || 0;
+            const secs = training.timeSeconds || 0;
+            valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
+        } else {
+            // Check if individual weights per set exist
+            if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+                valueDisplay = training.weightsPerSet.join(' / ') + ' kg';
             } else {
-                // Check if individual weights per set exist
-                if (training.weightsPerSet && training.weightsPerSet.length > 0) {
-                    valueDisplay = training.weightsPerSet.join(' / ') + ' kg';
-                } else {
-                    valueDisplay = `${training.weight} kg`;
-                }
+                valueDisplay = `${training.weight} kg`;
             }
-
-            return `
-                <div class="training-item ${achievedClass}">
-                    <div class="training-info">
-                        <h3>${training.exercise} ${repRangeBadge}</h3>
-                        <div class="training-details">
-                            <div class="detail-item">
-                                <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
-                                <div class="detail-value">${valueDisplay}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Sätze</div>
-                                <div class="detail-value">${training.sets}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Wiederholungen</div>
-                                <div class="detail-value">${repsDisplay}</div>
-                            </div>
-                            <div class="detail-item">
-                                <div class="detail-label">Gesamt Wdh.</div>
-                                <div class="detail-value">${totalReps}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="training-actions">
-                        <button class="edit-btn" onclick="editTraining(${training.id})">Bearbeiten</button>
-                        <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        }
 
         return `
-            <div class="date-block">
-                <div class="date-header">
-                    <div class="date-icon">📅</div>
-                    <h3 class="date-title">${formattedDate}</h3>
-                    <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
-                </div>
-                <div class="borg-day-container">
-                    <label>Wie war das Training heute?</label>
-                    <div class="borg-day-input">
-                        <input type="range" min="1" max="10" value="${borgValue || 5}"
-                               onchange="saveDailyBorg('${date}', this.value)"
-                               oninput="updateBorgDisplay('${date}', this.value)"
-                               class="borg-slider">
-                        <span class="borg-display" id="borg-${date}" style="color: ${borgColor}">
-                            ${borgValue ? borgValue + '/10' : '?/10'}
-                        </span>
+            <div class="training-item ${achievedClass}">
+                <div class="training-info">
+                    <h3>${training.exercise} ${repRangeBadge}</h3>
+                    <div class="training-details">
+                        <div class="detail-item">
+                            <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
+                            <div class="detail-value">${valueDisplay}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Sätze</div>
+                            <div class="detail-value">${training.sets}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Wiederholungen</div>
+                            <div class="detail-value">${repsDisplay}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Gesamt Wdh.</div>
+                            <div class="detail-value">${totalReps}</div>
+                        </div>
                     </div>
                 </div>
-                <div class="date-trainings">
-                    ${trainingsHTML}
+                <div class="training-actions">
+                    <button class="edit-btn" onclick="editTraining(${training.id})">Bearbeiten</button>
+                    <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
                 </div>
             </div>
         `;
     }).join('');
+
+    trainingList.innerHTML = `
+        <div class="date-block">
+            <div class="date-header">
+                <div class="date-icon">📅</div>
+                <h3 class="date-title">${formattedDate}</h3>
+                <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
+            </div>
+            <div class="borg-day-container">
+                <label>Wie war das Training heute?</label>
+                <div class="borg-day-input">
+                    <input type="range" min="1" max="10" value="${borgValue || 5}"
+                           onchange="saveDailyBorg('${selectedDate}', this.value)"
+                           oninput="updateBorgDisplay('${selectedDate}', this.value)"
+                           class="borg-slider">
+                    <span class="borg-display" id="borg-${selectedDate}" style="color: ${borgColor}">
+                        ${borgValue ? borgValue + '/10' : '?/10'}
+                    </span>
+                </div>
+            </div>
+            <div class="date-trainings">
+                ${trainingsHTML}
+            </div>
+        </div>
+    `;
 }
 
 searchInput.addEventListener('input', displayTrainings);
-sortSelect.addEventListener('change', displayTrainings);
+historyDateSelect.addEventListener('change', function() {
+    selectedHistoryDate = this.value;
+    displayTrainings();
+});
 
 // ========================================
 // BORG-WERT FUNKTIONEN

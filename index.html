@@ -137,10 +137,8 @@
 
                     <div class="filter-section">
                         <input type="text" id="searchExercise" placeholder="Übung suchen...">
-                        <select id="sortBy">
-                            <option value="date-desc">Neueste zuerst</option>
-                            <option value="date-asc">Älteste zuerst</option>
-                            <option value="exercise">Nach Übung</option>
+                        <select id="historyDateSelect">
+                            <!-- Wird dynamisch gefüllt -->
                         </select>
                     </div>
 
@@ -361,14 +359,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=19"></script>
-    <script src="sync.js?v=19"></script>
+    <script src="firebase-config.js?v=20"></script>
+    <script src="sync.js?v=20"></script>
 
     <!-- Plan Analysis System -->
-    <script src="plan-analysis.js?v=19"></script>
+    <script src="plan-analysis.js?v=20"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=19"></script>
+    <script src="app.js?v=20"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -380,7 +378,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v19') {
+                        if (cacheName !== 'krafttraining-v20') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -390,7 +388,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=19')
+                navigator.serviceWorker.register('/service-worker.js?v=20')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
