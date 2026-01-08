@@ -2032,6 +2032,13 @@ function updateBodyWeightChart() {
 
     const data = sortedWeights.map(w => w.weight);
 
+    // Berechne sinnvollen Y-Achsen-Bereich (±3 kg vom Min/Max, auf ganze kg gerundet)
+    const minWeight = Math.min(...data);
+    const maxWeight = Math.max(...data);
+    const padding = 3; // kg Puffer oben und unten
+    const yMin = Math.floor(minWeight - padding);
+    const yMax = Math.ceil(maxWeight + padding);
+
     if (bodyWeightChart) {
         bodyWeightChart.destroy();
     }
@@ -2046,8 +2053,10 @@ function updateBodyWeightChart() {
                 data: data,
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                tension: 0.4,
-                fill: true
+                tension: 0.3,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6
             }]
         },
         options: {
@@ -2060,8 +2069,8 @@ function updateBodyWeightChart() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            // Formatiere Gewicht mit zwei Nachkommastellen und Komma
-                            const weight = context.parsed.y.toFixed(2).replace('.', ',');
+                            // Formatiere Gewicht mit einer Nachkommastelle und Komma
+                            const weight = context.parsed.y.toFixed(1).replace('.', ',');
                             return 'Körpergewicht: ' + weight + ' kg';
                         }
                     }
@@ -2070,10 +2079,13 @@ function updateBodyWeightChart() {
             scales: {
                 y: {
                     beginAtZero: false,
+                    min: yMin,
+                    max: yMax,
                     ticks: {
+                        stepSize: 1, // 1 kg Schritte für bessere Lesbarkeit
                         callback: function(value) {
-                            // Formatiere Y-Achsen-Werte mit zwei Nachkommastellen und Komma
-                            return value.toFixed(2).replace('.', ',') + ' kg';
+                            // Formatiere Y-Achsen-Werte mit einer Nachkommastelle
+                            return value.toFixed(1).replace('.', ',') + ' kg';
                         }
                     }
                 }
