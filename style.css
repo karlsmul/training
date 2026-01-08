@@ -1842,6 +1842,332 @@ select:focus {
     color: #6bcf7f;
 }
 
+/* ========================================
+   PLAN ANALYSIS UI
+   ======================================== */
+
+.plan-analysis-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 20px;
+}
+
+.plan-analysis-section h3 {
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 5px;
+    font-weight: 700;
+}
+
+/* Datums-Navigation */
+.analysis-date-picker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.analysis-date-picker .nav-btn {
+    padding: 8px 16px;
+    border: 2px solid #667eea;
+    background: white;
+    color: #667eea;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.analysis-date-picker .nav-btn:hover:not(:disabled) {
+    background: #667eea;
+    color: white;
+}
+
+.analysis-date-picker .nav-btn:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.analysis-date-picker .current-date {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+    min-width: 180px;
+    text-align: center;
+}
+
+/* Zusammenfassung */
+.analysis-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.summary-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.analysis-empty {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+}
+
+/* Analyse Cards */
+.exercise-analysis-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.analysis-card {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-left: 4px solid #667eea;
+}
+
+.analysis-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.ampel-status {
+    font-size: 1.5rem;
+}
+
+.analysis-card-header .exercise-name {
+    flex: 1;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.analysis-card-header .rep-range-badge {
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Plan vs Ist */
+.analysis-plan-ist {
+    background: #f8f9fa;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.analysis-plan-ist .plan-row,
+.analysis-plan-ist .ist-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.analysis-plan-ist .label {
+    color: #666;
+    font-weight: 600;
+}
+
+.analysis-plan-ist .value {
+    color: #333;
+    font-family: monospace;
+}
+
+/* Metriken Grid */
+.analysis-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.metric-card {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Strength Index Farben */
+.metric-value.si-excellent,
+.summary-value.si-excellent {
+    color: #6bcf7f;
+}
+
+.metric-value.si-good,
+.summary-value.si-good {
+    color: #667eea;
+}
+
+.metric-value.si-warning,
+.summary-value.si-warning {
+    color: #ffd93d;
+}
+
+.metric-value.si-danger,
+.summary-value.si-danger {
+    color: #ff6b6b;
+}
+
+/* Progress Reserve Farben */
+.metric-value.positive {
+    color: #6bcf7f;
+}
+
+.metric-value.negative {
+    color: #ff6b6b;
+}
+
+/* Empfehlungs-Badge */
+.analysis-recommendation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.analysis-recommendation.increase {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+}
+
+.analysis-recommendation.hold {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+}
+
+.analysis-recommendation.observe {
+    background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
+    color: #383d41;
+}
+
+.analysis-recommendation.fatigue {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+}
+
+.recommendation-icon {
+    font-size: 1.2rem;
+}
+
+.recommendation-text {
+    flex: 1;
+}
+
+/* Chart Container */
+.analysis-chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.analysis-chart-container h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .analysis-summary-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .summary-card {
+        padding: 10px;
+    }
+
+    .summary-value {
+        font-size: 1.2rem;
+    }
+
+    .analysis-metrics-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .metric-card {
+        padding: 8px;
+    }
+
+    .metric-value {
+        font-size: 1rem;
+    }
+
+    .analysis-date-picker {
+        gap: 10px;
+    }
+
+    .analysis-date-picker .nav-btn {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .analysis-date-picker .current-date {
+        font-size: 0.95rem;
+        min-width: 140px;
+    }
+}
+
 /* Settings Section */
 .settings-section {
     background: #f8f9fa;

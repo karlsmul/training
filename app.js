@@ -1604,194 +1604,252 @@ function populateTotalRepsExerciseDropdown() {
 }
 
 // ========================================
-// STRENGTH INDEX UI
+// PLAN ANALYSIS UI
 // ========================================
 
-let strengthChart = null;
+let analysisChart = null;
+let currentAnalysisDate = null;
 
 /**
- * Initialisiert das Strength Index System mit bestehenden Trainingsdaten
+ * Initialisiert das Plan Analysis System
  */
-function initStrengthIndex() {
-    if (typeof strengthIndex === 'undefined') {
-        console.warn('Strength Index nicht geladen');
+function initPlanAnalysis() {
+    if (typeof planAnalysis === 'undefined') {
+        console.warn('PlanAnalysis nicht geladen');
         return;
     }
 
-    // Importiere bestehende Trainings
-    strengthIndex.importFromTrainings(trainings);
+    // Cache leeren für frische Berechnung
+    planAnalysis.clearCache();
 
-    // Dropdown befüllen
-    populateStrengthExerciseDropdown();
+    // Aktuellsten Trainingstag finden
+    const dates = planAnalysis.getTrainingDates();
+    currentAnalysisDate = dates.length > 0 ? dates[0] : new Date().toISOString().split('T')[0];
 
-    // Event-Listener für Dropdown
-    const dropdown = document.getElementById('strengthExercise');
-    if (dropdown && !dropdown.hasAttribute('data-listener-added')) {
-        dropdown.setAttribute('data-listener-added', 'true');
-        dropdown.addEventListener('change', function() {
-            displayStrengthIndex(this.value);
-        });
+    // Event-Listener für Navigation
+    const prevBtn = document.getElementById('prevDayBtn');
+    const nextBtn = document.getElementById('nextDayBtn');
+
+    if (prevBtn && !prevBtn.hasAttribute('data-listener-added')) {
+        prevBtn.setAttribute('data-listener-added', 'true');
+        prevBtn.addEventListener('click', () => navigateAnalysisDate(-1));
     }
+
+    if (nextBtn && !nextBtn.hasAttribute('data-listener-added')) {
+        nextBtn.setAttribute('data-listener-added', 'true');
+        nextBtn.addEventListener('click', () => navigateAnalysisDate(1));
+    }
+
+    // Initiale Anzeige
+    displayPlanAnalysis(currentAnalysisDate);
 }
 
 /**
- * Befüllt das Übungs-Dropdown für Strength Index
+ * Navigiert zu einem anderen Trainingstag
+ * @param {number} direction - -1 für zurück, +1 für vorwärts
  */
-function populateStrengthExerciseDropdown() {
-    const dropdown = document.getElementById('strengthExercise');
-    if (!dropdown || typeof strengthIndex === 'undefined') return;
+function navigateAnalysisDate(direction) {
+    const dates = planAnalysis.getTrainingDates();
+    if (dates.length === 0) return;
 
-    const exercises = strengthIndex.getExercises();
-    const currentValue = dropdown.value;
+    const currentIndex = dates.indexOf(currentAnalysisDate);
 
-    dropdown.innerHTML = '<option value="">Übung wählen...</option>' +
-        exercises.map(ex => `<option value="${ex}" ${ex === currentValue ? 'selected' : ''}>${ex}</option>`).join('');
-}
-
-/**
- * Zeigt den Strength Index für eine Übung an
- * @param {string} exercise
- */
-function displayStrengthIndex(exercise) {
-    const statusContainer = document.getElementById('strengthStatusContainer');
-    const recommendationContainer = document.getElementById('strengthRecommendation');
-
-    if (!statusContainer || !recommendationContainer) return;
-
-    if (!exercise) {
-        statusContainer.innerHTML = '';
-        recommendationContainer.innerHTML = '';
-        if (strengthChart) {
-            strengthChart.destroy();
-            strengthChart = null;
+    if (direction < 0) {
+        // Älteres Datum (höherer Index)
+        const newIndex = currentIndex + 1;
+        if (newIndex < dates.length) {
+            currentAnalysisDate = dates[newIndex];
         }
+    } else {
+        // Neueres Datum (niedrigerer Index)
+        const newIndex = currentIndex - 1;
+        if (newIndex >= 0) {
+            currentAnalysisDate = dates[newIndex];
+        }
+    }
+
+    displayPlanAnalysis(currentAnalysisDate);
+}
+
+/**
+ * Zeigt die Plan-Analyse für einen bestimmten Tag an
+ * @param {string} date - ISO-Datum
+ */
+function displayPlanAnalysis(date) {
+    const dateDisplay = document.getElementById('analysisDate');
+    const summaryContainer = document.getElementById('analysisSummary');
+    const listContainer = document.getElementById('exerciseAnalysisList');
+    const chartContainer = document.getElementById('analysisChartContainer');
+
+    if (!dateDisplay || !summaryContainer || !listContainer) {
+        console.warn('PlanAnalysis UI-Elemente nicht gefunden');
         return;
     }
 
-    const status = strengthIndex.getStrengthStatus(exercise);
-    const recommendation = strengthIndex.getTrainingRecommendation(exercise);
+    // Datum formatieren und anzeigen
+    const dateObj = new Date(date);
+    dateDisplay.textContent = dateObj.toLocaleDateString('de-DE', {
+        weekday: 'short',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
 
-    if (!status) {
-        statusContainer.innerHTML = '<div class="empty-state"><p>Keine Daten für diese Übung.</p></div>';
-        recommendationContainer.innerHTML = '';
+    // Analyse abrufen
+    const analysis = planAnalysis.analyzeDayTrainings(date);
+
+    // Navigation-Buttons Status
+    const dates = planAnalysis.getTrainingDates();
+    const currentIndex = dates.indexOf(date);
+    document.getElementById('prevDayBtn').disabled = currentIndex >= dates.length - 1;
+    document.getElementById('nextDayBtn').disabled = currentIndex <= 0;
+
+    // Keine Trainings an diesem Tag
+    if (analysis.sessions.length === 0) {
+        summaryContainer.innerHTML = `
+            <div class="analysis-empty">
+                <p>Keine Trainings an diesem Tag</p>
+            </div>
+        `;
+        listContainer.innerHTML = '';
+        if (chartContainer) chartContainer.style.display = 'none';
         return;
     }
 
-    // Status-Anzeige
-    const statusColors = {
-        'improving': '#6bcf7f',
-        'maintaining': '#ffd93d',
-        'declining': '#ff6b6b',
-        'peaking': '#00d4ff',
-        'recovering': '#ff9f43'
-    };
-
-    const statusLabels = {
-        'improving': '📈 Verbesserung',
-        'maintaining': '➡️ Stabil',
-        'declining': '📉 Rückgang',
-        'peaking': '🔥 Peak-Form',
-        'recovering': '🔄 Erholung'
-    };
-
-    const trendArrow = status.trend > 0.02 ? '↑' : status.trend < -0.02 ? '↓' : '→';
-    const trendPercent = (status.trend * 100).toFixed(1);
-
-    // Wöchentlicher Fortschritt
-    const weeklyProgress = status.weeklyProgress;
-    const weekProgressHTML = weeklyProgress ? `
-        <div class="weekly-progress-section">
-            <h4>Wochenziel (3er/6er/10er)</h4>
-            <div class="weekly-progress-badges">
-                <span class="week-badge ${weeklyProgress.has3er ? 'completed' : 'pending'}">3er ${weeklyProgress.has3er ? '✓' : '○'}</span>
-                <span class="week-badge ${weeklyProgress.has6er ? 'completed' : 'pending'}">6er ${weeklyProgress.has6er ? '✓' : '○'}</span>
-                <span class="week-badge ${weeklyProgress.has10er ? 'completed' : 'pending'}">10er ${weeklyProgress.has10er ? '✓' : '○'}</span>
+    // Zusammenfassung
+    summaryContainer.innerHTML = `
+        <div class="analysis-summary-grid">
+            <div class="summary-card">
+                <span class="summary-label">Ø Strength Index</span>
+                <span class="summary-value ${getSIColorClass(analysis.avgStrengthIndex)}">${analysis.avgStrengthIndex}%</span>
             </div>
-            <div class="weekly-progress-bar">
-                <div class="progress-fill" style="width: ${(weeklyProgress.completedRanges / 3) * 100}%"></div>
+            <div class="summary-card">
+                <span class="summary-label">Borg</span>
+                <span class="summary-value">${analysis.borgValue !== null ? analysis.borgValue : '-'}</span>
             </div>
-            <span class="weekly-progress-text">${weeklyProgress.completedRanges}/3 Bereiche diese Woche</span>
-        </div>
-    ` : '';
-
-    statusContainer.innerHTML = `
-        ${weekProgressHTML}
-        <div class="strength-status-grid">
-            <div class="strength-stat-card">
-                <div class="strength-stat-label">Aktueller e1RM</div>
-                <div class="strength-stat-value">${status.currentE1RM} <span class="unit">kg</span></div>
+            <div class="summary-card">
+                <span class="summary-label">Übungen</span>
+                <span class="summary-value">${analysis.exerciseCount}</span>
             </div>
-            <div class="strength-stat-card">
-                <div class="strength-stat-label">Strength Index</div>
-                <div class="strength-stat-value">${status.strengthIndex}</div>
-            </div>
-            <div class="strength-stat-card">
-                <div class="strength-stat-label">Trend</div>
-                <div class="strength-stat-value trend-${status.trend > 0 ? 'up' : status.trend < 0 ? 'down' : 'stable'}">
-                    ${trendArrow} ${trendPercent}%
-                </div>
-            </div>
-            <div class="strength-stat-card">
-                <div class="strength-stat-label">Readiness</div>
-                <div class="strength-stat-value">${status.readinessScore}<span class="unit">%</span></div>
-            </div>
-        </div>
-        <div class="strength-status-badge" style="background: ${statusColors[status.status]}20; border-color: ${statusColors[status.status]}">
-            <span style="color: ${statusColors[status.status]}">${statusLabels[status.status]}</span>
         </div>
     `;
 
-    // Empfehlung
-    if (recommendation) {
-        // Zeige Empfehlung für nächsten Rep-Range basierend auf Wochenfortschritt
-        const nextRange = recommendation.nextRecommendedRange || '6er';
-        const repRangeWeights = recommendation.repRangeWeights || {};
+    // Übungs-Analyse-Cards
+    listContainer.innerHTML = analysis.sessions.map(session => createAnalysisCard(session)).join('');
 
-        recommendationContainer.innerHTML = `
-            <div class="recommendation-card">
-                <h4>💡 Trainingsempfehlung</h4>
-                <p class="recommendation-text">${recommendation.recommendation}</p>
-
-                <div class="next-training-highlight">
-                    <span class="next-label">Nächstes Training:</span>
-                    <span class="next-range-badge">${nextRange}</span>
-                    <span class="next-weight">${recommendation.nextRangeWeight} kg × ${recommendation.nextRangeSets}×${recommendation.nextRangeReps}</span>
-                </div>
-
-                <div class="rep-range-weights-grid">
-                    <div class="rep-range-weight-card ${nextRange === '3er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has3er ? 'completed' : ''}">
-                        <span class="range-label">3er</span>
-                        <span class="range-weight">${repRangeWeights['3er'] ? repRangeWeights['3er'].weight : recommendation.weights.heavy} kg</span>
-                        <span class="range-detail">4×3 (90%)</span>
-                    </div>
-                    <div class="rep-range-weight-card ${nextRange === '6er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has6er ? 'completed' : ''}">
-                        <span class="range-label">6er</span>
-                        <span class="range-weight">${repRangeWeights['6er'] ? repRangeWeights['6er'].weight : recommendation.weights.target} kg</span>
-                        <span class="range-detail">4×6 (80%)</span>
-                    </div>
-                    <div class="rep-range-weight-card ${nextRange === '10er' ? 'recommended' : ''} ${weeklyProgress && weeklyProgress.has10er ? 'completed' : ''}">
-                        <span class="range-label">10er</span>
-                        <span class="range-weight">${repRangeWeights['10er'] ? repRangeWeights['10er'].weight : recommendation.weights.light} kg</span>
-                        <span class="range-detail">4×10 (70%)</span>
-                    </div>
-                </div>
-            </div>
-        `;
+    // Chart aktualisieren (wenn es Daten gibt)
+    if (chartContainer && analysis.sessions.length > 0) {
+        chartContainer.style.display = 'block';
+        updateAnalysisChart(analysis.sessions[0].exercise);
     }
-
-    // Chart aktualisieren
-    updateStrengthChart(exercise);
 }
 
 /**
- * Aktualisiert den Strength Index Chart
+ * Erstellt eine Analyse-Card für eine Übung
+ * @param {Object} session - SessionAnalysis Objekt
+ * @returns {string} HTML
+ */
+function createAnalysisCard(session) {
+    const ampel = getAmpelEmoji(session.recommendation.status);
+    const siColorClass = getSIColorClass(session.strengthIndex);
+    const reserveColorClass = session.progressReserve >= 0 ? 'positive' : 'negative';
+
+    // Wiederholungen formatieren
+    const repsDisplay = session.actualReps.filter(r => r > 0).join(', ');
+
+    return `
+        <div class="analysis-card">
+            <div class="analysis-card-header">
+                <span class="ampel-status">${ampel}</span>
+                <span class="exercise-name">${session.exercise}</span>
+                <span class="rep-range-badge">${session.repRange}</span>
+            </div>
+
+            <div class="analysis-plan-ist">
+                <div class="plan-row">
+                    <span class="label">Plan:</span>
+                    <span class="value">${session.plannedWeight} kg × 4×${session.plannedReps} = ${session.plannedTotalReps} Wdh</span>
+                </div>
+                <div class="ist-row">
+                    <span class="label">Ist:</span>
+                    <span class="value">${session.actualWeights[0]} kg × [${repsDisplay}] = ${session.actualTotalReps} Wdh</span>
+                </div>
+            </div>
+
+            <div class="analysis-metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-label">PFI</span>
+                    <span class="metric-value">${(session.pfi * 100).toFixed(1)}%</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Strength Index</span>
+                    <span class="metric-value ${siColorClass}">${session.strengthIndex}%</span>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-label">Reserve</span>
+                    <span class="metric-value ${reserveColorClass}">${session.progressReserve >= 0 ? '+' : ''}${session.progressReserve}%</span>
+                </div>
+            </div>
+
+            <div class="analysis-recommendation ${session.recommendation.status}">
+                <span class="recommendation-icon">${getRecommendationIcon(session.recommendation.status)}</span>
+                <span class="recommendation-text">${session.recommendation.text}</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Gibt das Ampel-Emoji basierend auf dem Status zurück
+ * @param {string} status
+ * @returns {string}
+ */
+function getAmpelEmoji(status) {
+    switch (status) {
+        case 'increase': return '✅';
+        case 'hold': return '🟡';
+        case 'observe': return '🟡';
+        case 'fatigue': return '❌';
+        default: return '🟡';
+    }
+}
+
+/**
+ * Gibt das Empfehlungs-Icon zurück
+ * @param {string} status
+ * @returns {string}
+ */
+function getRecommendationIcon(status) {
+    switch (status) {
+        case 'increase': return '📈';
+        case 'hold': return '➡️';
+        case 'observe': return '👀';
+        case 'fatigue': return '⚠️';
+        default: return '💡';
+    }
+}
+
+/**
+ * Gibt die CSS-Klasse für den Strength Index zurück
+ * @param {number} si
+ * @returns {string}
+ */
+function getSIColorClass(si) {
+    if (si >= 105) return 'si-excellent';
+    if (si >= 98) return 'si-good';
+    if (si >= 97) return 'si-warning';
+    return 'si-danger';
+}
+
+/**
+ * Aktualisiert den Analyse-Chart für eine Übung
  * @param {string} exercise
  */
-function updateStrengthChart(exercise) {
-    const canvas = document.getElementById('strengthChart');
-    if (!canvas || typeof strengthIndex === 'undefined') return;
+function updateAnalysisChart(exercise) {
+    const canvas = document.getElementById('analysisChart');
+    if (!canvas || typeof planAnalysis === 'undefined') return;
 
-    const history = strengthIndex.getHistory(exercise);
+    const history = planAnalysis.getExerciseHistory(exercise, 10);
 
     if (history.length < 2) {
         canvas.parentElement.style.display = 'none';
@@ -1800,27 +1858,30 @@ function updateStrengthChart(exercise) {
 
     canvas.parentElement.style.display = 'block';
 
-    if (strengthChart) {
-        strengthChart.destroy();
+    if (analysisChart) {
+        analysisChart.destroy();
     }
 
-    const labels = history.map(h => {
+    // Daten in chronologischer Reihenfolge (älteste zuerst)
+    const sortedHistory = [...history].reverse();
+
+    const labels = sortedHistory.map(h => {
         const date = new Date(h.date);
         return date.toLocaleDateString('de-DE', { day: '2-digit', month: 'short' });
     });
 
-    const strengthData = history.map(h => h.strengthIndex);
-    const e1rmData = history.map(h => h.e1rm);
+    const siData = sortedHistory.map(h => h.strengthIndex);
+    const pfiData = sortedHistory.map(h => h.pfi * 100);
 
     const ctx = canvas.getContext('2d');
-    strengthChart = new Chart(ctx, {
+    analysisChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [
                 {
-                    label: 'Strength Index',
-                    data: strengthData,
+                    label: 'Strength Index (%)',
+                    data: siData,
                     borderColor: '#667eea',
                     backgroundColor: 'rgba(102, 126, 234, 0.1)',
                     tension: 0.4,
@@ -1828,13 +1889,13 @@ function updateStrengthChart(exercise) {
                     yAxisID: 'y'
                 },
                 {
-                    label: 'e1RM (kg)',
-                    data: e1rmData,
-                    borderColor: '#ff6b6b',
+                    label: 'PFI (%)',
+                    data: pfiData,
+                    borderColor: '#6bcf7f',
                     backgroundColor: 'transparent',
                     tension: 0.4,
                     borderDash: [5, 5],
-                    yAxisID: 'y1'
+                    yAxisID: 'y'
                 }
             ]
         },
@@ -1849,6 +1910,23 @@ function updateStrengthChart(exercise) {
                 legend: {
                     display: true,
                     position: 'top'
+                },
+                annotation: {
+                    annotations: {
+                        line100: {
+                            type: 'line',
+                            yMin: 100,
+                            yMax: 100,
+                            borderColor: 'rgba(255, 107, 107, 0.5)',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            label: {
+                                display: true,
+                                content: '100%',
+                                position: 'end'
+                            }
+                        }
+                    }
                 }
             },
             scales: {
@@ -1856,26 +1934,33 @@ function updateStrengthChart(exercise) {
                     type: 'linear',
                     display: true,
                     position: 'left',
+                    min: 80,
+                    max: 120,
                     title: {
                         display: true,
-                        text: 'Strength Index'
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
-                        display: true,
-                        text: 'e1RM (kg)'
-                    },
-                    grid: {
-                        drawOnChartArea: false
+                        text: 'Prozent (%)'
                     }
                 }
             }
         }
     });
+}
+
+// Legacy-Funktionen für Kompatibilität
+function initStrengthIndex() {
+    initPlanAnalysis();
+}
+
+function populateStrengthExerciseDropdown() {
+    // Nicht mehr benötigt
+}
+
+function displayStrengthIndex(exercise) {
+    // Nicht mehr benötigt
+}
+
+function updateStrengthChart(exercise) {
+    updateAnalysisChart(exercise);
 }
 
 // ========================================

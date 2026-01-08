@@ -227,8 +227,10 @@ async function syncFromCloud() {
         populateTotalRepsExerciseDropdown();
     }
 
-    // Strength Index nach Cloud-Sync aktualisieren
-    if (typeof initStrengthIndex === 'function') {
+    // Plan Analysis nach Cloud-Sync aktualisieren
+    if (typeof initPlanAnalysis === 'function') {
+        initPlanAnalysis();
+    } else if (typeof initStrengthIndex === 'function') {
         initStrengthIndex();
     }
 
@@ -482,8 +484,10 @@ function manualUpdateUI() {
       populateTotalRepsExerciseDropdown();
   }
 
-  // Strength Index aktualisieren
-  if (typeof initStrengthIndex === 'function') {
+  // Plan Analysis aktualisieren
+  if (typeof initPlanAnalysis === 'function') {
+      initPlanAnalysis();
+  } else if (typeof initStrengthIndex === 'function') {
       initStrengthIndex();
   }
 

@@ -1,10 +1,10 @@
-const CACHE_NAME = 'krafttraining-v18';
+const CACHE_NAME = 'krafttraining-v19';
 const urlsToCache = [
   '/style.css',
   '/app.js',
   '/sync.js',
   '/firebase-config.js',
-  '/strength-index.js',
+  '/plan-analysis.js',
   '/manifest.json'
 ];
 

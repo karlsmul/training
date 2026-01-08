@@ -261,28 +261,32 @@
                         </div>
                     </div>
 
-                    <!-- Strength Index Section -->
-                    <div class="strength-index-section">
-                        <h3>Strength Index</h3>
-                        <p class="section-subtitle">e1RM-basierte Leistungsanalyse mit Trainingsempfehlungen</p>
+                    <!-- Plan Analysis Section -->
+                    <div class="plan-analysis-section">
+                        <h3>Plan-Analyse</h3>
+                        <p class="section-subtitle">Planbasierte Auswertung mit Strength Index und Empfehlungen</p>
 
-                        <div class="strength-exercise-selector">
-                            <label for="strengthExercise">Übung:</label>
-                            <select id="strengthExercise">
-                                <option value="">Übung wählen...</option>
-                            </select>
+                        <!-- Datums-Navigation -->
+                        <div class="analysis-date-picker">
+                            <button id="prevDayBtn" class="nav-btn">← Älter</button>
+                            <span id="analysisDate" class="current-date">--</span>
+                            <button id="nextDayBtn" class="nav-btn">Neuer →</button>
                         </div>
 
-                        <div id="strengthStatusContainer" class="strength-status-container">
+                        <!-- Zusammenfassung -->
+                        <div id="analysisSummary" class="analysis-summary">
                             <!-- Wird dynamisch gefüllt -->
                         </div>
 
-                        <div id="strengthChartContainer" class="strength-chart-container">
-                            <canvas id="strengthChart"></canvas>
+                        <!-- Übungs-Analyse-Liste -->
+                        <div id="exerciseAnalysisList" class="exercise-analysis-list">
+                            <!-- Wird dynamisch gefüllt -->
                         </div>
 
-                        <div id="strengthRecommendation" class="strength-recommendation">
-                            <!-- Wird dynamisch gefüllt -->
+                        <!-- Chart -->
+                        <div id="analysisChartContainer" class="analysis-chart-container">
+                            <h4>Verlauf</h4>
+                            <canvas id="analysisChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -386,14 +390,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=18"></script>
-    <script src="sync.js?v=18"></script>
+    <script src="firebase-config.js?v=19"></script>
+    <script src="sync.js?v=19"></script>
 
-    <!-- Strength Index System -->
-    <script src="strength-index.js?v=18"></script>
+    <!-- Plan Analysis System -->
+    <script src="plan-analysis.js?v=19"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -405,7 +409,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v18') {
+                        if (cacheName !== 'krafttraining-v19') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -415,7 +419,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=18')
+                navigator.serviceWorker.register('/service-worker.js?v=19')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
