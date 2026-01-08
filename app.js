@@ -1308,6 +1308,12 @@ function displayExerciseList() {
 
     console.log('displayExerciseList: Zeige', exercises.length, 'Übungen');
 
+    // Summary-Text aktualisieren mit Anzahl
+    const summaryEl = document.getElementById('exerciseSummary');
+    if (summaryEl) {
+        summaryEl.textContent = `Gespeicherte Übungen anzeigen (${exercises.length})`;
+    }
+
     if (exercises.length === 0) {
         exerciseList.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Übungen</p>';
         return;
