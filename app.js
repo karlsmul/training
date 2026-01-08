@@ -1654,18 +1654,14 @@ function initPlanAnalysis() {
     const dates = planAnalysis.getTrainingDates();
     currentAnalysisDate = dates.length > 0 ? dates[0] : new Date().toISOString().split('T')[0];
 
-    // Event-Listener für Navigation
-    const prevBtn = document.getElementById('prevDayBtn');
-    const nextBtn = document.getElementById('nextDayBtn');
-
-    if (prevBtn && !prevBtn.hasAttribute('data-listener-added')) {
-        prevBtn.setAttribute('data-listener-added', 'true');
-        prevBtn.addEventListener('click', () => navigateAnalysisDate(-1));
-    }
-
-    if (nextBtn && !nextBtn.hasAttribute('data-listener-added')) {
-        nextBtn.setAttribute('data-listener-added', 'true');
-        nextBtn.addEventListener('click', () => navigateAnalysisDate(1));
+    // Event-Listener für Dropdown
+    const dateSelect = document.getElementById('analysisDateSelect');
+    if (dateSelect && !dateSelect.hasAttribute('data-listener-added')) {
+        dateSelect.setAttribute('data-listener-added', 'true');
+        dateSelect.addEventListener('change', function() {
+            currentAnalysisDate = this.value;
+            displayPlanAnalysis(currentAnalysisDate);
+        });
     }
 
     // Initiale Anzeige
@@ -1673,30 +1669,40 @@ function initPlanAnalysis() {
 }
 
 /**
- * Navigiert zu einem anderen Trainingstag
- * @param {number} direction - -1 für zurück, +1 für vorwärts
+ * Befüllt das Datums-Dropdown für die Plan-Analyse
  */
-function navigateAnalysisDate(direction) {
+function populateAnalysisDateDropdown() {
+    const dateSelect = document.getElementById('analysisDateSelect');
+    if (!dateSelect) return;
+
     const dates = planAnalysis.getTrainingDates();
-    if (dates.length === 0) return;
 
-    const currentIndex = dates.indexOf(currentAnalysisDate);
-
-    if (direction < 0) {
-        // Älteres Datum (höherer Index)
-        const newIndex = currentIndex + 1;
-        if (newIndex < dates.length) {
-            currentAnalysisDate = dates[newIndex];
-        }
-    } else {
-        // Neueres Datum (niedrigerer Index)
-        const newIndex = currentIndex - 1;
-        if (newIndex >= 0) {
-            currentAnalysisDate = dates[newIndex];
-        }
+    if (dates.length === 0) {
+        dateSelect.innerHTML = '<option value="">Keine Trainings</option>';
+        return;
     }
 
-    displayPlanAnalysis(currentAnalysisDate);
+    dateSelect.innerHTML = dates.map(date => {
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('de-DE', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        // Anzahl analysierter Übungen für diesen Tag
+        const analysis = planAnalysis.analyzeDayTrainings(date);
+        const exerciseCount = analysis.sessions.length;
+        return `<option value="${date}">${formattedDate} (${exerciseCount} Übungen)</option>`;
+    }).join('');
+
+    // Aktuell ausgewähltes Datum setzen
+    if (currentAnalysisDate && dates.includes(currentAnalysisDate)) {
+        dateSelect.value = currentAnalysisDate;
+    } else if (dates.length > 0) {
+        currentAnalysisDate = dates[0];
+        dateSelect.value = currentAnalysisDate;
+    }
 }
 
 /**
@@ -1704,33 +1710,21 @@ function navigateAnalysisDate(direction) {
  * @param {string} date - ISO-Datum
  */
 function displayPlanAnalysis(date) {
-    const dateDisplay = document.getElementById('analysisDate');
+    const dateSelect = document.getElementById('analysisDateSelect');
     const summaryContainer = document.getElementById('analysisSummary');
     const listContainer = document.getElementById('exerciseAnalysisList');
     const chartContainer = document.getElementById('analysisChartContainer');
 
-    if (!dateDisplay || !summaryContainer || !listContainer) {
+    if (!dateSelect || !summaryContainer || !listContainer) {
         console.warn('PlanAnalysis UI-Elemente nicht gefunden');
         return;
     }
 
-    // Datum formatieren und anzeigen
-    const dateObj = new Date(date);
-    dateDisplay.textContent = dateObj.toLocaleDateString('de-DE', {
-        weekday: 'short',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+    // Dropdown aktualisieren
+    populateAnalysisDateDropdown();
 
     // Analyse abrufen
     const analysis = planAnalysis.analyzeDayTrainings(date);
-
-    // Navigation-Buttons Status
-    const dates = planAnalysis.getTrainingDates();
-    const currentIndex = dates.indexOf(date);
-    document.getElementById('prevDayBtn').disabled = currentIndex >= dates.length - 1;
-    document.getElementById('nextDayBtn').disabled = currentIndex <= 0;
 
     // Keine Trainings an diesem Tag
     if (analysis.sessions.length === 0) {
