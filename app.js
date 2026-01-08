@@ -289,9 +289,26 @@ toggleBtns.forEach(btn => {
 setsInput.addEventListener('input', generateRepsInputs);
 differentWeightsCheckbox.addEventListener('change', generateRepsInputs);
 
-function generateRepsInputs() {
-    const numSets = parseInt(setsInput.value) || 3;
+/**
+ * Generiert die Wiederholungs-Eingabefelder
+ * @param {boolean} clearValues - Wenn true, werden alle Werte geleert (nach dem Speichern)
+ */
+function generateRepsInputs(clearValues = false) {
+    const numSets = parseInt(setsInput.value) || 4;
     const useDifferentWeights = differentWeightsCheckbox.checked && currentTrainingType === 'weight';
+
+    // Bestehende Werte speichern (falls nicht explizit geleert werden soll)
+    const existingReps = [];
+    const existingWeights = [];
+    if (!clearValues) {
+        for (let i = 1; i <= 10; i++) {
+            const repInput = document.getElementById(`rep${i}`);
+            const weightInput = document.getElementById(`weight${i}`);
+            if (repInput) existingReps[i] = repInput.value;
+            if (weightInput) existingWeights[i] = weightInput.value;
+        }
+    }
+
     repsInputsContainer.innerHTML = '';
 
     for (let i = 1; i <= numSets; i++) {
@@ -312,6 +329,14 @@ function generateRepsInputs() {
         }
 
         repsInputsContainer.appendChild(repInputGroup);
+
+        // Bestehende Werte wiederherstellen (falls vorhanden und nicht geleert)
+        if (!clearValues && existingReps[i]) {
+            document.getElementById(`rep${i}`).value = existingReps[i];
+        }
+        if (!clearValues && existingWeights[i] && useDifferentWeights) {
+            document.getElementById(`weight${i}`).value = existingWeights[i];
+        }
     }
 }
 
@@ -444,7 +469,7 @@ form.addEventListener('submit', async function(e) {
 
         form.reset();
         setCurrentDate();
-        generateRepsInputs();
+        generateRepsInputs(true); // true = Werte leeren nach dem Speichern
     }
 
     saveTrainings();
@@ -535,7 +560,7 @@ function cancelEdit() {
     form.reset();
     setCurrentDate();
     differentWeightsCheckbox.checked = false;
-    generateRepsInputs();
+    generateRepsInputs(true); // true = Werte leeren beim Abbrechen
 
     // Training Type zurücksetzen
     currentTrainingType = 'weight';
@@ -2503,7 +2528,7 @@ window.initStrengthIndex = initStrengthIndex;
 
 async function initApp() {
     setCurrentDate();
-    generateRepsInputs();
+    generateRepsInputs(true); // true = Mit leeren Feldern starten
     populateExerciseDropdown();
     displayTrainings();
     displayPersonalRecords();
