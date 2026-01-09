@@ -209,6 +209,7 @@ async function syncFromCloud() {
       // Kein User-Dokument in Cloud - behalte lokale Übungen
       exercises = [...localExercises];
       hasLocalData = true;
+      localStorage.setItem('exercises', JSON.stringify(exercises));
       console.log('✅ Kein Cloud-Dokument, behalte lokale Übungen:', exercises.length);
     }
 

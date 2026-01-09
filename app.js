@@ -64,6 +64,13 @@ let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null, targetWeight: null };
 let exercises = JSON.parse(localStorage.getItem('exercises')) || [];
 
+// Standard-Übungen hinzufügen, falls keine vorhanden
+if (exercises.length === 0) {
+    exercises = ['Kreuzheben', 'Kniebeugen', 'Bankdrücken', 'Klimmzüge', 'Schulterdrücken'];
+    localStorage.setItem('exercises', JSON.stringify(exercises));
+    console.log('Standard-Übungen hinzugefügt:', exercises);
+}
+
 // Edit-Modus Tracking
 let editMode = false;
 let editingId = null;
