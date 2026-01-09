@@ -849,7 +849,8 @@ window.updateBorgDisplay = updateBorgDisplay;
 // ========================================
 
 function displayPersonalRecords() {
-    const exercises = {
+    // Übungen mit Gewicht (Big 3)
+    const weightExercises = {
         'Kniebeugen Front': {
             names: ['kniebeugen front', 'front kniebeugen', 'frontkniebeugen', 'front squat', 'front squats'],
             icon: '🦵',
@@ -867,10 +868,20 @@ function displayPersonalRecords() {
         }
     };
 
+    // Bodyweight-Übungen (ohne Gewicht, Wiederholungen zählen)
+    const bodyweightExercises = {
+        'Klimmzüge': {
+            names: ['klimmzüge', 'klimmzug', 'pull-ups', 'pullups', 'pull ups', 'chin-ups', 'chinups'],
+            icon: '🧗',
+            color: 'purple'
+        }
+    };
+
     const records = {};
 
-    Object.keys(exercises).forEach(exerciseName => {
-        const exerciseData = exercises[exerciseName];
+    // Gewichts-Übungen verarbeiten (wie bisher)
+    Object.keys(weightExercises).forEach(exerciseName => {
+        const exerciseData = weightExercises[exerciseName];
 
         const exerciseTrainings = trainings.filter(training => {
             const trainingName = training.exercise.toLowerCase().trim();
@@ -919,10 +930,65 @@ function displayPersonalRecords() {
                 reps: displayReps,
                 icon: exerciseData.icon,
                 color: exerciseData.color,
-                totalLifts: exerciseTrainings.length
+                totalLifts: exerciseTrainings.length,
+                isBodyweight: false
             };
         }
     });
+
+    // Bodyweight-Übungen verarbeiten (Wiederholungen statt Gewicht)
+    Object.keys(bodyweightExercises).forEach(exerciseName => {
+        const exerciseData = bodyweightExercises[exerciseName];
+
+        const exerciseTrainings = trainings.filter(training => {
+            const trainingName = training.exercise.toLowerCase().trim();
+            // Akzeptiere sowohl weight als auch time Typ, aber nur wenn Wiederholungen vorhanden
+            return exerciseData.names.some(name => trainingName.includes(name)) &&
+                   training.reps && (Array.isArray(training.reps) ? training.reps.length > 0 : training.reps > 0);
+        });
+
+        if (exerciseTrainings.length > 0) {
+            // Berechne für jedes Training: max Reps in einem Satz und Gesamtwiederholungen
+            const trainingStats = exerciseTrainings.map(training => {
+                const repsArray = Array.isArray(training.reps) ? training.reps : [training.reps];
+                const maxSingleSetReps = Math.max(...repsArray.map(r => parseInt(r) || 0));
+                const totalReps = repsArray.reduce((sum, r) => sum + (parseInt(r) || 0), 0);
+                return {
+                    training,
+                    maxSingleSetReps,
+                    totalReps
+                };
+            });
+
+            // Finde Training mit höchster Wiederholungszahl in einem Satz
+            const bestSingleSetTraining = trainingStats.reduce((max, curr) =>
+                curr.maxSingleSetReps > max.maxSingleSetReps ? curr : max
+            );
+
+            // Finde Training mit höchster Gesamtwiederholungszahl
+            const bestTotalRepsTraining = trainingStats.reduce((max, curr) =>
+                curr.totalReps > max.totalReps ? curr : max
+            );
+
+            records[exerciseName] = {
+                ...bestSingleSetTraining.training,
+                maxSingleSetReps: bestSingleSetTraining.maxSingleSetReps,
+                maxSingleSetDate: bestSingleSetTraining.training.date,
+                totalReps: bestTotalRepsTraining.totalReps,
+                totalRepsDate: bestTotalRepsTraining.training.date,
+                totalRepsSets: Array.isArray(bestTotalRepsTraining.training.reps)
+                    ? bestTotalRepsTraining.training.reps.length
+                    : 1,
+                icon: exerciseData.icon,
+                color: exerciseData.color,
+                totalLifts: exerciseTrainings.length,
+                isBodyweight: true
+            };
+        }
+    });
+
+    // Alle Übungen kombinieren für die Anzeige
+    const allExercises = { ...weightExercises, ...bodyweightExercises };
 
     if (Object.keys(records).length === 0) {
         recordsList.innerHTML = `
@@ -931,21 +997,21 @@ function displayPersonalRecords() {
                 <p>Noch keine Bestleistungen vorhanden</p>
                 <p class="no-records-hint">
                     Füge Trainingseinträge für folgende Übungen hinzu:<br>
-                    <strong>Kniebeugen Front, Bankdrücken oder Kreuzheben</strong>
+                    <strong>Kniebeugen Front, Bankdrücken, Kreuzheben oder Klimmzüge</strong>
                 </p>
             </div>
         `;
         return;
     }
 
-    recordsList.innerHTML = Object.keys(exercises).map(exerciseName => {
+    recordsList.innerHTML = Object.keys(allExercises).map(exerciseName => {
         const record = records[exerciseName];
 
         if (!record) {
             return `
                 <div class="record-card">
                     <div class="record-exercise">
-                        <div class="record-icon">${exercises[exerciseName].icon}</div>
+                        <div class="record-icon">${allExercises[exerciseName].icon}</div>
                         <div class="record-name">${exerciseName}</div>
                     </div>
                     <div class="no-records" style="padding: 20px;">
@@ -955,44 +1021,85 @@ function displayPersonalRecords() {
             `;
         }
 
-        const date = new Date(record.date);
-        const formattedDate = date.toLocaleDateString('de-DE', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        });
+        // Unterscheide zwischen Gewichts- und Bodyweight-Übungen
+        if (record.isBodyweight) {
+            // Bodyweight-Übung: Zeige max Reps pro Satz und Gesamtwiederholungen
+            const singleSetDate = new Date(record.maxSingleSetDate);
+            const totalRepsDate = new Date(record.totalRepsDate);
 
-        // Zeige nur die Wiederholungszahl des besten Satzes
-        const repsDisplay = record.reps || 0;
+            const formatDate = (date) => date.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
 
-        return `
-            <div class="record-card ${record.color}">
-                <div class="record-exercise">
-                    <div class="record-icon">${record.icon}</div>
-                    <div class="record-name">${exerciseName}</div>
-                </div>
-                <div class="record-stats">
-                    <div class="record-stat">
-                        <div class="record-stat-label">Maximales Gewicht</div>
-                        <div class="record-stat-value">
-                            ${record.weight}
-                            <span class="record-stat-unit">kg</span>
+            return `
+                <div class="record-card ${record.color}">
+                    <div class="record-exercise">
+                        <div class="record-icon">${record.icon}</div>
+                        <div class="record-name">${exerciseName}</div>
+                    </div>
+                    <div class="record-stats">
+                        <div class="record-stat">
+                            <div class="record-stat-label">Max. Wdh. (1 Satz)</div>
+                            <div class="record-stat-value">
+                                ${record.maxSingleSetReps}
+                            </div>
+                            <div class="record-stat-date">${formatDate(singleSetDate)}</div>
+                        </div>
+                        <div class="record-stat">
+                            <div class="record-stat-label">Gesamt-Wdh. (${record.totalRepsSets} Sätze)</div>
+                            <div class="record-stat-value">
+                                ${record.totalReps}
+                            </div>
+                            <div class="record-stat-date">${formatDate(totalRepsDate)}</div>
                         </div>
                     </div>
-                    <div class="record-stat">
-                        <div class="record-stat-label">Bei Wiederholungen</div>
-                        <div class="record-stat-value">
-                            ${repsDisplay}
-                        </div>
+                    <div class="record-date">
+                        <small>Gesamt: ${record.totalLifts} Trainingseinheiten</small>
                     </div>
                 </div>
-                <div class="record-date">
-                    <strong>Erreicht am:</strong> ${formattedDate}
-                    <br>
-                    <small>Gesamt: ${record.totalLifts} Trainingseinheiten</small>
+            `;
+        } else {
+            // Gewichts-Übung: Zeige Gewicht und Wiederholungen (wie bisher)
+            const date = new Date(record.date);
+            const formattedDate = date.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            const repsDisplay = record.reps || 0;
+
+            return `
+                <div class="record-card ${record.color}">
+                    <div class="record-exercise">
+                        <div class="record-icon">${record.icon}</div>
+                        <div class="record-name">${exerciseName}</div>
+                    </div>
+                    <div class="record-stats">
+                        <div class="record-stat">
+                            <div class="record-stat-label">Maximales Gewicht</div>
+                            <div class="record-stat-value">
+                                ${record.weight}
+                                <span class="record-stat-unit">kg</span>
+                            </div>
+                        </div>
+                        <div class="record-stat">
+                            <div class="record-stat-label">Bei Wiederholungen</div>
+                            <div class="record-stat-value">
+                                ${repsDisplay}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="record-date">
+                        <strong>Erreicht am:</strong> ${formattedDate}
+                        <br>
+                        <small>Gesamt: ${record.totalLifts} Trainingseinheiten</small>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }).join('');
 }
 

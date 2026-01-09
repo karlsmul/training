@@ -832,6 +832,14 @@ select:focus {
     background: linear-gradient(135deg, #cd7f32 0%, #e6a857 100%);
 }
 
+.record-card.purple {
+    background: linear-gradient(135deg, #9b59b6 0%, #bb8fce 100%);
+}
+
+.record-card.purple .record-name {
+    color: #fff;
+}
+
 .record-exercise {
     display: flex;
     align-items: center;
@@ -884,6 +892,12 @@ select:focus {
 .record-stat-unit {
     font-size: 1rem;
     color: #888;
+}
+
+.record-stat-date {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 5px;
 }
 
 .record-date {
