@@ -56,8 +56,9 @@ function migrateOldData() {
 // Trainingseinträge aus localStorage laden (mit Migration)
 let trainings = migrateOldData();
 
-// Gewichts-Merkhilfe: Übung -> Wiederholungen -> Gewicht
-let weightNotes = JSON.parse(localStorage.getItem('weightNotes')) || [];
+// Trainingsplan: Übung -> Gewichte für 10er, 6er, 3er
+// Format: { id, exercise, weight10, weight6, weight3 }
+let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
 
 let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
@@ -85,7 +86,7 @@ let currentTrainingType = 'weight';
 const AppState = {
     // Daten-Referenzen (für schrittweise Migration)
     get trainings() { return trainings; },
-    get weightNotes() { return weightNotes; },
+    get trainingPlans() { return trainingPlans; },
     get bodyWeights() { return bodyWeights; },
     get dailyBorgValues() { return dailyBorgValues; },
     get personalInfo() { return personalInfo; },
@@ -231,11 +232,10 @@ const timeGroup = document.getElementById('timeGroup');
 const toggleBtns = document.querySelectorAll('.toggle-btn');
 const differentWeightsCheckbox = document.getElementById('differentWeights');
 
-// Gewichts-Merkhilfe elements
-const weightNoteForm = document.getElementById('weightNoteForm');
-const weightNotesList = document.getElementById('weightNotesList');
-const weightNoteExerciseSelect = document.getElementById('weightNoteExercise');
-const weightNotesFilterExercise = document.getElementById('weightNotesFilterExercise');
+// Trainingsplan elements
+const trainingPlanForm = document.getElementById('trainingPlanForm');
+const trainingPlanList = document.getElementById('trainingPlanList');
+const planExerciseSelect = document.getElementById('planExercise');
 
 // Trainingshistorie Filter
 const searchInput = document.getElementById('searchExercise');
@@ -389,37 +389,20 @@ function populateExerciseDropdown() {
         exerciseSelect.value = currentValue;
     }
 
-    // Auch Gewichts-Merkhilfe Dropdown füllen
-    if (weightNoteExerciseSelect) {
-        const noteCurrentValue = weightNoteExerciseSelect.value;
-        weightNoteExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
+    // Trainingsplan-Dropdown füllen
+    if (planExerciseSelect) {
+        const currentValue = planExerciseSelect.value;
+        planExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
 
         exercises.forEach(exercise => {
             const option = document.createElement('option');
             option.value = exercise;
             option.textContent = exercise;
-            weightNoteExerciseSelect.appendChild(option);
+            planExerciseSelect.appendChild(option);
         });
 
-        if (noteCurrentValue && exercises.includes(noteCurrentValue)) {
-            weightNoteExerciseSelect.value = noteCurrentValue;
-        }
-    }
-
-    // Gewichts-Merkhilfe Filter-Dropdown füllen
-    if (weightNotesFilterExercise) {
-        const filterCurrentValue = weightNotesFilterExercise.value;
-        weightNotesFilterExercise.innerHTML = '<option value="">-- Übung wählen --</option>';
-
-        exercises.forEach(exercise => {
-            const option = document.createElement('option');
-            option.value = exercise;
-            option.textContent = exercise;
-            weightNotesFilterExercise.appendChild(option);
-        });
-
-        if (filterCurrentValue && exercises.includes(filterCurrentValue)) {
-            weightNotesFilterExercise.value = filterCurrentValue;
+        if (currentValue && exercises.includes(currentValue)) {
+            planExerciseSelect.value = currentValue;
         }
     }
 
@@ -1033,125 +1016,144 @@ function displayPersonalRecords() {
 // ========================================
 
 // Gewichts-Notiz hinzufügen
-if (weightNoteForm) {
-    weightNoteForm.addEventListener('submit', async function(e) {
+// ========================================
+// TRAININGSPLAN (10er, 6er, 3er Gewichte)
+// ========================================
+
+if (trainingPlanForm) {
+    trainingPlanForm.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const exercise = weightNoteExerciseSelect.value;
-        const reps = parseInt(document.getElementById('weightNoteReps').value);
-        const weight = parseFloat(document.getElementById('weightNoteWeight').value);
+        const exercise = planExerciseSelect.value;
+        const weight10 = parseFloat(document.getElementById('planWeight10').value) || null;
+        const weight6 = parseFloat(document.getElementById('planWeight6').value) || null;
+        const weight3 = parseFloat(document.getElementById('planWeight3').value) || null;
 
-        if (!exercise || !reps) {
-            showNotification('Bitte Übung und Wiederholungen ausfüllen!');
+        if (!exercise) {
+            showNotification('Bitte eine Übung auswählen!');
             return;
         }
 
-        // Prüfen ob Eintrag für diese Übung+Wiederholungen bereits existiert
-        const existingIndex = weightNotes.findIndex(n => n.exercise === exercise && n.reps === reps);
+        if (!weight10 && !weight6 && !weight3) {
+            showNotification('Bitte mindestens ein Gewicht eintragen!');
+            return;
+        }
 
-        const note = {
-            id: existingIndex !== -1 ? weightNotes[existingIndex].id : Date.now(),
+        // Prüfen ob Plan für diese Übung bereits existiert
+        const existingIndex = trainingPlans.findIndex(p => p.exercise === exercise);
+
+        const plan = {
+            id: existingIndex !== -1 ? trainingPlans[existingIndex].id : Date.now(),
             exercise: exercise,
-            reps: reps,
-            weight: isNaN(weight) ? null : weight // Gewicht ist optional
+            weight10: weight10,
+            weight6: weight6,
+            weight3: weight3
         };
 
         if (existingIndex !== -1) {
-            weightNotes[existingIndex] = note;
-            showNotification('Gewicht aktualisiert!');
+            trainingPlans[existingIndex] = plan;
+            showNotification('Plan aktualisiert!');
         } else {
-            weightNotes.push(note);
-            showNotification('Gewicht gespeichert!');
+            trainingPlans.push(plan);
+            showNotification('Plan gespeichert!');
         }
 
-        localStorage.setItem('weightNotes', JSON.stringify(weightNotes));
+        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
         // Sync zur Cloud
-        if (typeof syncWeightNoteToCloud === 'function') {
-            await syncWeightNoteToCloud(note);
+        if (typeof syncTrainingPlanToCloud === 'function') {
+            await syncTrainingPlanToCloud(plan);
         }
 
-        displayWeightNotes();
-        weightNoteForm.reset();
+        displayTrainingPlans();
+        trainingPlanForm.reset();
     });
+
+    // Wenn Übung ausgewählt wird, lade bestehende Werte
+    if (planExerciseSelect) {
+        planExerciseSelect.addEventListener('change', function() {
+            const exercise = this.value;
+            const existingPlan = trainingPlans.find(p => p.exercise === exercise);
+
+            if (existingPlan) {
+                document.getElementById('planWeight10').value = existingPlan.weight10 || '';
+                document.getElementById('planWeight6').value = existingPlan.weight6 || '';
+                document.getElementById('planWeight3').value = existingPlan.weight3 || '';
+            } else {
+                document.getElementById('planWeight10').value = '';
+                document.getElementById('planWeight6').value = '';
+                document.getElementById('planWeight3').value = '';
+            }
+        });
+    }
 }
 
-// Gewichts-Notizen anzeigen (nur für ausgewählte Übung)
-function displayWeightNotes() {
-    if (!weightNotesList) return;
+// Trainingsplan anzeigen
+function displayTrainingPlans() {
+    if (!trainingPlanList) return;
 
-    // Keine Übung ausgewählt
-    const selectedExercise = weightNotesFilterExercise ? weightNotesFilterExercise.value : null;
-
-    if (!selectedExercise) {
-        weightNotesList.innerHTML = `
+    if (trainingPlans.length === 0) {
+        trainingPlanList.innerHTML = `
             <div class="empty-state">
-                <p>Wähle eine Übung aus dem Dropdown-Menü, um deine Gewichts-Notizen zu sehen.</p>
+                <p>Noch kein Trainingsplan vorhanden.</p>
+                <p>Wähle eine Übung und trage deine Zielgewichte ein!</p>
             </div>
         `;
         return;
     }
 
-    // Notizen für ausgewählte Übung filtern
-    const notesForExercise = weightNotes
-        .filter(n => n.exercise === selectedExercise)
-        .sort((a, b) => b.reps - a.reps); // Höhere Wdh. zuerst
+    // Sortiere alphabetisch nach Übung
+    const sortedPlans = [...trainingPlans].sort((a, b) => a.exercise.localeCompare(b.exercise));
 
-    if (notesForExercise.length === 0) {
-        weightNotesList.innerHTML = `
-            <div class="empty-state">
-                <p>Noch keine Gewichte für "${selectedExercise}" notiert.</p>
-                <p>Trage dein erstes Gewicht ein!</p>
-            </div>
-        `;
-        return;
-    }
+    trainingPlanList.innerHTML = sortedPlans.map(plan => {
+        const w10 = plan.weight10 ? `${plan.weight10} kg` : '--';
+        const w6 = plan.weight6 ? `${plan.weight6} kg` : '--';
+        const w3 = plan.weight3 ? `${plan.weight3} kg` : '--';
 
-    // HTML generieren
-    const notesHtml = notesForExercise.map(note => {
-        const weightDisplay = note.weight !== null ? `${note.weight} kg` : 'Körpergewicht';
         return `
-            <div class="weight-note-row">
-                <span class="weight-note-reps">${note.reps} Wdh.</span>
-                <span class="weight-note-weight">${weightDisplay}</span>
-                <button class="delete-btn-small" onclick="deleteWeightNote(${note.id})">×</button>
+            <div class="plan-card">
+                <div class="plan-card-header">
+                    <h3>${plan.exercise}</h3>
+                    <button class="delete-btn-small" onclick="deleteTrainingPlan(${plan.id})">×</button>
+                </div>
+                <div class="plan-weights">
+                    <div class="plan-weight-cell">
+                        <span class="plan-label">10er</span>
+                        <span class="plan-value">${w10}</span>
+                    </div>
+                    <div class="plan-weight-cell">
+                        <span class="plan-label">6er</span>
+                        <span class="plan-value">${w6}</span>
+                    </div>
+                    <div class="plan-weight-cell">
+                        <span class="plan-label">3er</span>
+                        <span class="plan-value">${w3}</span>
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
-
-    weightNotesList.innerHTML = `
-        <div class="weight-note-card">
-            <h3 class="weight-note-exercise">${selectedExercise}</h3>
-            <div class="weight-note-list">
-                ${notesHtml}
-            </div>
-        </div>
-    `;
 }
 
-// Event Listener für Filter-Dropdown
-if (weightNotesFilterExercise) {
-    weightNotesFilterExercise.addEventListener('change', displayWeightNotes);
-}
-
-// Gewichts-Notiz löschen
-async function deleteWeightNote(id) {
-    if (confirm('Diesen Eintrag wirklich löschen?')) {
-        weightNotes = weightNotes.filter(n => n.id !== id);
-        localStorage.setItem('weightNotes', JSON.stringify(weightNotes));
+// Trainingsplan löschen
+async function deleteTrainingPlan(id) {
+    if (confirm('Diesen Plan wirklich löschen?')) {
+        trainingPlans = trainingPlans.filter(p => p.id !== id);
+        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
         // Aus Cloud löschen
-        if (typeof deleteWeightNoteFromCloud === 'function') {
-            await deleteWeightNoteFromCloud(id);
+        if (typeof deleteTrainingPlanFromCloud === 'function') {
+            await deleteTrainingPlanFromCloud(id);
         }
 
-        displayWeightNotes();
-        showNotification('Eintrag gelöscht!');
+        displayTrainingPlans();
+        showNotification('Plan gelöscht!');
     }
 }
 
-// Globale Funktion für onclick-Handler
-window.deleteWeightNote = deleteWeightNote;
+// Globale Funktionen
+window.deleteTrainingPlan = deleteTrainingPlan;
+window.displayTrainingPlans = displayTrainingPlans;
 
 // ========================================
 // EINSTELLUNGEN - KÖRPERGEWICHT
@@ -2372,6 +2374,10 @@ tabButtons.forEach(button => {
             updateBorgValueChart();
             displayTrainingVolume();
             initStrengthIndex();
+            // Big 3 Auswertung initialisieren
+            if (typeof initPlanAnalysis === 'function') {
+                initPlanAnalysis();
+            }
         }
 
         // Personal Records aktualisieren
@@ -2381,7 +2387,7 @@ tabButtons.forEach(button => {
 
         // Gewichts-Merkhilfe anzeigen
         if (tabName === 'plan') {
-            displayWeightNotes();
+            displayTrainingPlans();
         }
 
         // Settings laden
@@ -2534,7 +2540,7 @@ if (!window.hideLoginModal) {
 // Display-Funktionen für sync.js exportieren
 window.displayTrainings = displayTrainings;
 window.displayPersonalRecords = displayPersonalRecords;
-window.displayWeightNotes = displayWeightNotes;
+window.displayTrainingPlans = displayTrainingPlans;
 window.displayBodyWeightHistory = displayBodyWeightHistory;
 window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
@@ -2555,7 +2561,7 @@ async function initApp() {
     displayPersonalRecords();
 
     // Gewichts-Merkhilfe initialisieren
-    displayWeightNotes();
+    displayTrainingPlans();
 
     displayBodyWeightHistory();
     displayExerciseList();
@@ -2652,7 +2658,7 @@ async function initApp() {
                 // Fallback: Update UI direkt
                 displayTrainings();
                 displayPersonalRecords();
-                displayWeightNotes();
+                displayTrainingPlans();
                 displayBodyWeightHistory();
                 populateExerciseDropdown();
                 displayExerciseList();

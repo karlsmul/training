@@ -1184,65 +1184,105 @@ select:focus {
     margin-top: 5px;
 }
 
-/* Gewichts-Merkhilfe Styles */
-.weight-note-form-container {
+/* Trainingsplan Styles */
+.plan-form-container {
     background: #f8f9fa;
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
 }
 
-.weight-note-form-container h3 {
+.plan-weights-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
     margin-bottom: 15px;
-    color: #333;
 }
 
-.weight-notes-list {
+.plan-weight-input {
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
-.weight-note-card {
+.plan-weight-input label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.plan-weight-input input {
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    transition: border-color 0.2s;
+}
+
+.plan-weight-input input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+/* Trainingsplan Liste */
+.training-plan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.plan-card {
     background: white;
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.weight-note-exercise {
-    color: #667eea;
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+.plan-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 2px solid #667eea;
 }
 
-.weight-note-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.weight-note-row {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.weight-note-reps {
-    flex: 1;
-    font-weight: 500;
+.plan-card-header h3 {
+    margin: 0;
     color: #333;
+    font-size: 1.1rem;
 }
 
-.weight-note-weight {
-    font-weight: 600;
+.plan-weights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.plan-weight-cell {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 12px 8px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.plan-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: #667eea;
-    font-size: 1.1rem;
-    margin-right: 15px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.plan-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
 }
 
 .delete-btn-small {
@@ -1262,31 +1302,6 @@ select:focus {
 
 .delete-btn-small:hover {
     background: #ee5a5a;
-}
-
-/* Filter-Dropdown Styling */
-.weight-notes-filter {
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.weight-notes-filter label {
-    font-weight: 500;
-    color: #333;
-    white-space: nowrap;
-}
-
-.weight-notes-filter select {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
 }
 
 /* Trainingshistorie Header */
@@ -2312,6 +2327,238 @@ select:focus {
     .analysis-date-picker .current-date {
         font-size: 0.95rem;
         min-width: 140px;
+    }
+}
+
+/* ========================================
+   BIG 3 AMPEL-AUSWERTUNG
+   ======================================== */
+
+/* Zusammenfassungs-Karten */
+.analysis-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.analysis-summary-cards .summary-card {
+    background: white;
+    padding: 15px 10px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analysis-summary-cards .summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.analysis-summary-cards .summary-icon {
+    display: block;
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.analysis-summary-cards .summary-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #333;
+}
+
+.analysis-summary-cards .summary-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 5px;
+}
+
+/* Status-Farben für Summary Cards */
+.summary-card.warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe6a0 100%);
+    border: 2px solid #ffc107;
+}
+
+.summary-card.success {
+    background: linear-gradient(135deg, #d4edda 0%, #b8e0c1 100%);
+    border: 2px solid #28a745;
+}
+
+.summary-card.highlight {
+    background: linear-gradient(135deg, #cce5ff 0%, #a8d4ff 100%);
+    border: 2px solid #007bff;
+}
+
+/* Übungs-Analyse-Karten */
+.exercise-analysis-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border-left: 5px solid #667eea;
+    transition: transform 0.2s ease;
+}
+
+.exercise-analysis-card:hover {
+    transform: translateX(3px);
+}
+
+/* Status-Border-Farben */
+.exercise-analysis-card.status-under_plan {
+    border-left-color: #ffc107;
+}
+
+.exercise-analysis-card.status-in_plan {
+    border-left-color: #28a745;
+}
+
+.exercise-analysis-card.status-over_plan {
+    border-left-color: #007bff;
+}
+
+/* Übungs-Header */
+.exercise-analysis-card .exercise-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.exercise-analysis-card .exercise-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+}
+
+/* Status-Badge */
+.status-badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.under_plan {
+    background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+    color: #856404;
+}
+
+.status-badge.in_plan {
+    background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+    color: white;
+}
+
+.status-badge.over_plan {
+    background: linear-gradient(135deg, #007bff 0%, #0d6efd 100%);
+    color: white;
+}
+
+/* Übungs-Details */
+.exercise-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.detail-row:last-of-type {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: #666;
+    font-weight: 500;
+}
+
+.detail-value {
+    color: #333;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+}
+
+/* Empfehlung */
+.recommendation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+
+.recommendation.highlight {
+    background: linear-gradient(135deg, #cce5ff 0%, #b8daff 100%);
+    border: 1px solid #007bff;
+}
+
+.rec-icon {
+    font-size: 1.2rem;
+}
+
+.rec-text {
+    flex: 1;
+    font-weight: 600;
+    color: #333;
+}
+
+.recommendation.highlight .rec-text {
+    color: #004085;
+}
+
+/* No Data State */
+.no-data {
+    text-align: center;
+    color: #666;
+    padding: 30px 20px;
+    font-style: italic;
+}
+
+/* Responsive für Big 3 Auswertung */
+@media (max-width: 500px) {
+    .analysis-summary-cards {
+        gap: 8px;
+    }
+
+    .analysis-summary-cards .summary-card {
+        padding: 12px 8px;
+    }
+
+    .analysis-summary-cards .summary-value {
+        font-size: 1.5rem;
+    }
+
+    .analysis-summary-cards .summary-label {
+        font-size: 0.65rem;
+    }
+
+    .exercise-analysis-card {
+        padding: 12px;
+    }
+
+    .exercise-analysis-card .exercise-header h4 {
+        font-size: 1rem;
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        font-size: 0.7rem;
     }
 }
 

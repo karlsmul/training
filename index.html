@@ -145,32 +145,35 @@
                     <div id="trainingList" class="training-list"></div>
                 </div>
 
-                <!-- Training Plan Tab - Gewichts-Merkhilfe -->
+                <!-- Training Plan Tab - Trainingsplan -->
                 <div id="planTab" class="tab-content">
                     <div class="plan-header">
-                        <h2>Gewichts-Merkhilfe</h2>
-                        <p class="plan-subtitle">Notiere dir, welches Gewicht du bei welcher Wiederholungszahl verwendest</p>
+                        <h2>Trainingsplan</h2>
+                        <p class="plan-subtitle">Deine Zielgewichte für 10er, 6er und 3er Sätze</p>
                     </div>
 
-                    <!-- Neue Gewichts-Notiz hinzufügen -->
-                    <div class="weight-note-form-container">
-                        <h3>Gewicht eintragen</h3>
-                        <form id="weightNoteForm">
+                    <!-- Übung hinzufügen/bearbeiten -->
+                    <div class="plan-form-container">
+                        <form id="trainingPlanForm">
                             <div class="form-group">
-                                <label for="weightNoteExercise">Übung:</label>
-                                <select id="weightNoteExercise" required>
+                                <label for="planExercise">Übung:</label>
+                                <select id="planExercise" required>
                                     <option value="">-- Übung auswählen --</option>
                                 </select>
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="weightNoteReps">Wiederholungen:</label>
-                                    <input type="number" id="weightNoteReps" min="1" max="50" placeholder="z.B. 10" required>
+                            <div class="plan-weights-row">
+                                <div class="plan-weight-input">
+                                    <label for="planWeight10">10er (kg)</label>
+                                    <input type="number" id="planWeight10" min="0" step="0.5" placeholder="--">
                                 </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="weightNoteWeight">Gewicht (kg, optional):</label>
-                                    <input type="number" id="weightNoteWeight" min="0" step="0.5" placeholder="optional">
+                                <div class="plan-weight-input">
+                                    <label for="planWeight6">6er (kg)</label>
+                                    <input type="number" id="planWeight6" min="0" step="0.5" placeholder="--">
+                                </div>
+                                <div class="plan-weight-input">
+                                    <label for="planWeight3">3er (kg)</label>
+                                    <input type="number" id="planWeight3" min="0" step="0.5" placeholder="--">
                                 </div>
                             </div>
 
@@ -178,17 +181,9 @@
                         </form>
                     </div>
 
-                    <!-- Filter für Übungs-Anzeige -->
-                    <div class="weight-notes-filter">
-                        <label for="weightNotesFilterExercise">Übung anzeigen:</label>
-                        <select id="weightNotesFilterExercise">
-                            <option value="">-- Übung wählen --</option>
-                        </select>
-                    </div>
-
-                    <!-- Gewichts-Übersicht (nur wenn Übung ausgewählt) -->
-                    <div id="weightNotesList" class="weight-notes-list">
-                        <!-- Gewichts-Notizen werden hier angezeigt -->
+                    <!-- Trainingsplan-Übersicht -->
+                    <div id="trainingPlanList" class="training-plan-list">
+                        <!-- Wird dynamisch gefüllt -->
                     </div>
                 </div>
 
@@ -235,10 +230,10 @@
                         <canvas id="bodyWeightChart"></canvas>
                     </div>
 
-                    <!-- Plan Analysis Section -->
+                    <!-- Big 3 Plan-Auswertung -->
                     <div class="plan-analysis-section">
-                        <h3>Plan-Analyse</h3>
-                        <p class="section-subtitle">Planbasierte Auswertung mit Strength Index und Empfehlungen</p>
+                        <h3>Big 3 Auswertung</h3>
+                        <p class="section-subtitle">Kreuzheben, Kniebeugen, Bankdrücken - Hast du den Plan erfüllt?</p>
 
                         <!-- Datums-Auswahl -->
                         <div class="analysis-date-picker">
@@ -255,12 +250,6 @@
                         <!-- Übungs-Analyse-Liste -->
                         <div id="exerciseAnalysisList" class="exercise-analysis-list">
                             <!-- Wird dynamisch gefüllt -->
-                        </div>
-
-                        <!-- Chart -->
-                        <div id="analysisChartContainer" class="analysis-chart-container">
-                            <h4>Verlauf</h4>
-                            <canvas id="analysisChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -377,14 +366,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=20"></script>
-    <script src="sync.js?v=20"></script>
+    <script src="firebase-config.js?v=23"></script>
+    <script src="sync.js?v=23"></script>
 
-    <!-- Plan Analysis System -->
-    <script src="plan-analysis.js?v=20"></script>
+    <!-- Big 3 Plan-Auswertung -->
+    <script src="plan-analysis.js?v=23"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=20"></script>
+    <script src="app.js?v=23"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -396,7 +385,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v20') {
+                        if (cacheName !== 'krafttraining-v21') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -406,7 +395,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=20')
+                navigator.serviceWorker.register('/service-worker.js?v=23')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
