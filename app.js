@@ -415,19 +415,24 @@ function populateExerciseDropdown() {
         }
     }
 
-    // Trainingshistorie Filter-Dropdown füllen
+    // Trainingshistorie Filter-Dropdown füllen (aus tatsächlichen Trainings)
     if (historyExerciseFilter) {
         const historyFilterValue = historyExerciseFilter.value;
         historyExerciseFilter.innerHTML = '<option value="">-- Übung wählen --</option>';
 
-        exercises.forEach(exercise => {
+        // Übungen aus den tatsächlichen Trainings holen (nicht aus der Übungsliste)
+        const trainedExercises = [...new Set(trainings.map(t => t.exercise))].sort();
+
+        trainedExercises.forEach(exercise => {
             const option = document.createElement('option');
             option.value = exercise;
-            option.textContent = exercise;
+            // Anzahl der Trainings für diese Übung anzeigen
+            const count = trainings.filter(t => t.exercise === exercise).length;
+            option.textContent = `${exercise} (${count})`;
             historyExerciseFilter.appendChild(option);
         });
 
-        if (historyFilterValue && exercises.includes(historyFilterValue)) {
+        if (historyFilterValue && trainedExercises.includes(historyFilterValue)) {
             historyExerciseFilter.value = historyFilterValue;
         }
     }
@@ -658,8 +663,35 @@ clearHistoryBtn.addEventListener('click', function() {
 // Globale Variable für ausgewählte Übung in der Historie
 let selectedHistoryExercise = null;
 
+// Historie-Dropdown aktualisieren (aus tatsächlichen Trainings)
+function updateHistoryExerciseDropdown() {
+    if (!historyExerciseFilter) return;
+
+    const currentValue = historyExerciseFilter.value;
+    historyExerciseFilter.innerHTML = '<option value="">-- Übung wählen --</option>';
+
+    // Übungen aus den tatsächlichen Trainings holen
+    const trainedExercises = [...new Set(trainings.map(t => t.exercise))].sort();
+
+    trainedExercises.forEach(exercise => {
+        const option = document.createElement('option');
+        option.value = exercise;
+        const count = trainings.filter(t => t.exercise === exercise).length;
+        option.textContent = `${exercise} (${count})`;
+        historyExerciseFilter.appendChild(option);
+    });
+
+    // Wert wiederherstellen falls vorhanden
+    if (currentValue && trainedExercises.includes(currentValue)) {
+        historyExerciseFilter.value = currentValue;
+    }
+}
+
 function displayTrainings() {
     if (!trainingList) return;
+
+    // Dropdown aktualisieren
+    updateHistoryExerciseDropdown();
 
     // Keine Trainings vorhanden
     if (trainings.length === 0) {
