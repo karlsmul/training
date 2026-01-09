@@ -2673,6 +2673,25 @@ async function initApp() {
         });
     }
 
+    // Event Listener für Passwort vergessen
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            if (!email) {
+                showNotification('Bitte zuerst E-Mail-Adresse eingeben');
+                document.getElementById('loginEmail').focus();
+                return;
+            }
+            if (typeof window.resetPassword === 'function') {
+                await window.resetPassword(email);
+            } else {
+                showNotification('Passwort-Reset nicht verfügbar');
+            }
+        });
+    }
+
     // Event Listener für Modal-Close-Button
     const modalClose = document.getElementById('modalClose');
     if (modalClose) {

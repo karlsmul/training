@@ -21,7 +21,7 @@
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
 
-    <link rel="stylesheet" href="style.css?v=34">
+    <link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
     <div class="container">
@@ -330,14 +330,15 @@
                     <input type="email" id="loginEmail" placeholder="E-Mail" required autocomplete="email">
                 </div>
                 <div class="form-group">
-                    <input type="password" id="loginPassword" placeholder="Passwort" required autocomplete="current-password" minlength="6">
+                    <input type="password" id="loginPassword" placeholder="Passwort (mind. 6 Zeichen)" required autocomplete="current-password" minlength="6">
                 </div>
                 <button type="submit" class="btn-primary">Mit E-Mail anmelden</button>
             </form>
 
             <p class="modal-footer">
-                Noch kein Konto?
-                <a href="#" id="registerLink">Registrieren</a>
+                Noch kein Konto? <a href="#" id="registerLink">Registrieren</a>
+                <br>
+                <a href="#" id="forgotPasswordLink">Passwort vergessen?</a>
             </p>
         </div>
     </div>
@@ -351,14 +352,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=34"></script>
-    <script src="sync.js?v=34"></script>
+    <script src="firebase-config.js?v=35"></script>
+    <script src="sync.js?v=35"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=34"></script>
+    <script src="plan-analysis.js?v=35"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=34"></script>
+    <script src="app.js?v=35"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -370,7 +371,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v34') {
+                        if (cacheName !== 'krafttraining-v35') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -380,7 +381,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=34')
+                navigator.serviceWorker.register('/service-worker.js?v=35')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

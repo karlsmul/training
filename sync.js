@@ -868,12 +868,18 @@ async function loginWithEmail(email, password) {
     console.error('Login-Fehler:', error);
     if (error.code === 'auth/user-not-found') {
       showNotification('❌ Benutzer nicht gefunden. Bitte registrieren.');
-    } else if (error.code === 'auth/wrong-password') {
+    } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
       showNotification('❌ Falsches Passwort');
     } else if (error.code === 'auth/invalid-email') {
       showNotification('❌ Ungültige E-Mail-Adresse');
     } else if (error.code === 'auth/network-request-failed') {
       showNotification('❌ Netzwerkfehler. Bitte Internetverbindung prüfen.');
+    } else if (error.code === 'auth/too-many-requests') {
+      showNotification('❌ Zu viele Versuche. Bitte später erneut versuchen.');
+    } else if (error.code === 'auth/user-disabled') {
+      showNotification('❌ Dieses Konto wurde deaktiviert.');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      showNotification('❌ E-Mail-Anmeldung ist nicht aktiviert. Bitte Firebase Console prüfen.');
     } else {
       showNotification('❌ Login fehlgeschlagen: ' + error.message);
     }
@@ -906,10 +912,42 @@ async function registerWithEmail(email, password) {
       showNotification('❌ E-Mail bereits registriert. Bitte anmelden.');
     } else if (error.code === 'auth/invalid-email') {
       showNotification('❌ Ungültige E-Mail-Adresse');
+    } else if (error.code === 'auth/weak-password') {
+      showNotification('❌ Passwort zu schwach. Mindestens 6 Zeichen.');
     } else if (error.code === 'auth/network-request-failed') {
       showNotification('❌ Netzwerkfehler. Bitte Internetverbindung prüfen.');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      showNotification('❌ E-Mail-Registrierung ist nicht aktiviert. Bitte Firebase Console prüfen.');
     } else {
       showNotification('❌ Registrierung fehlgeschlagen: ' + error.message);
+    }
+  }
+}
+
+// Passwort zurücksetzen
+async function resetPassword(email) {
+  try {
+    if (!auth) {
+      showNotification('⚠️ Firebase noch nicht konfiguriert!');
+      return;
+    }
+
+    if (!email) {
+      showNotification('❌ Bitte E-Mail-Adresse eingeben');
+      return;
+    }
+
+    console.log('Sende Passwort-Reset E-Mail an:', email);
+    await auth.sendPasswordResetEmail(email);
+    showNotification('✅ E-Mail zum Zurücksetzen des Passworts gesendet!');
+  } catch (error) {
+    console.error('Passwort-Reset Fehler:', error);
+    if (error.code === 'auth/user-not-found') {
+      showNotification('❌ Kein Konto mit dieser E-Mail gefunden');
+    } else if (error.code === 'auth/invalid-email') {
+      showNotification('❌ Ungültige E-Mail-Adresse');
+    } else {
+      showNotification('❌ Fehler: ' + error.message);
     }
   }
 }
@@ -1034,6 +1072,7 @@ window.deleteDailyBorgFromCloud = deleteDailyBorgFromCloud;
 window.loginWithGoogle = loginWithGoogle;
 window.loginWithEmail = loginWithEmail;
 window.registerWithEmail = registerWithEmail;
+window.resetPassword = resetPassword;
 window.logout = logout;
 window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
