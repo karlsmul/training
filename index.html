@@ -237,29 +237,6 @@
                         <h3>Körpergewicht-Entwicklung</h3>
                         <canvas id="bodyWeightChart"></canvas>
                     </div>
-
-                    <!-- Big 3 Plan-Auswertung -->
-                    <div class="plan-analysis-section">
-                        <h3>Big 3 Auswertung</h3>
-                        <p class="section-subtitle">Kreuzheben, Kniebeugen, Bankdrücken - Hast du den Plan erfüllt?</p>
-
-                        <!-- Datums-Auswahl -->
-                        <div class="analysis-date-picker">
-                            <select id="analysisDateSelect">
-                                <!-- Wird dynamisch gefüllt -->
-                            </select>
-                        </div>
-
-                        <!-- Zusammenfassung -->
-                        <div id="analysisSummary" class="analysis-summary">
-                            <!-- Wird dynamisch gefüllt -->
-                        </div>
-
-                        <!-- Übungs-Analyse-Liste -->
-                        <div id="exerciseAnalysisList" class="exercise-analysis-list">
-                            <!-- Wird dynamisch gefüllt -->
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Settings Tab -->
@@ -374,14 +351,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=30"></script>
-    <script src="sync.js?v=30"></script>
+    <script src="firebase-config.js?v=31"></script>
+    <script src="sync.js?v=31"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=30"></script>
+    <script src="plan-analysis.js?v=31"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=30"></script>
+    <script src="app.js?v=31"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -393,7 +370,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v30') {
+                        if (cacheName !== 'krafttraining-v31') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -403,7 +380,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=30')
+                navigator.serviceWorker.register('/service-worker.js?v=31')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
