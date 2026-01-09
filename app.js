@@ -994,22 +994,50 @@ function displayPersonalRecords() {
 
 // Plan-Einträge: { id, exercise, weight, sets, reps }
 let planEntries = JSON.parse(localStorage.getItem('planEntries')) || [];
+let selectedPlanExercise = ''; // Aktuell ausgewählte Übung zur Anzeige
 
 // Plan-Formular
 const planEntryForm = document.getElementById('planEntryForm');
 const planExerciseSelect = document.getElementById('planExercise');
+const planViewExerciseSelect = document.getElementById('planViewExercise');
 const planList = document.getElementById('planList');
 
-// Übungs-Dropdown im Plan befüllen
+// Übungs-Dropdown im Plan befüllen (beide Dropdowns)
 function populatePlanExerciseSelect() {
-    if (!planExerciseSelect) return;
+    // Eingabe-Dropdown
+    if (planExerciseSelect) {
+        planExerciseSelect.innerHTML = '<option value="">-- Übung wählen --</option>';
+        exercises.forEach(exercise => {
+            const option = document.createElement('option');
+            option.value = exercise;
+            option.textContent = exercise;
+            planExerciseSelect.appendChild(option);
+        });
+    }
 
-    planExerciseSelect.innerHTML = '<option value="">-- Übung wählen --</option>';
-    exercises.forEach(exercise => {
-        const option = document.createElement('option');
-        option.value = exercise;
-        option.textContent = exercise;
-        planExerciseSelect.appendChild(option);
+    // Anzeige-Dropdown (nur Übungen mit Einträgen)
+    if (planViewExerciseSelect) {
+        const exercisesWithEntries = [...new Set(planEntries.map(e => e.exercise))];
+        planViewExerciseSelect.innerHTML = '<option value="">-- Übung wählen --</option>';
+        exercisesWithEntries.forEach(exercise => {
+            const option = document.createElement('option');
+            option.value = exercise;
+            option.textContent = exercise;
+            planViewExerciseSelect.appendChild(option);
+        });
+
+        // Aktuelle Auswahl wiederherstellen
+        if (selectedPlanExercise && exercisesWithEntries.includes(selectedPlanExercise)) {
+            planViewExerciseSelect.value = selectedPlanExercise;
+        }
+    }
+}
+
+// Event Listener für Anzeige-Dropdown
+if (planViewExerciseSelect) {
+    planViewExerciseSelect.addEventListener('change', function() {
+        selectedPlanExercise = this.value;
+        displayPlanEntries();
     });
 }
 
@@ -1045,27 +1073,53 @@ if (planEntryForm) {
             await syncPlanEntryToCloud(entry);
         }
 
+        // Automatisch zur neu angelegten Übung wechseln
+        selectedPlanExercise = exercise;
+        populatePlanExerciseSelect();
         displayPlanEntries();
         planEntryForm.reset();
         showNotification('Eintrag gespeichert!');
     });
 }
 
-// Plan-Einträge anzeigen
+// Plan-Einträge anzeigen (gefiltert nach ausgewählter Übung)
 function displayPlanEntries() {
     if (!planList) return;
 
-    if (planEntries.length === 0) {
+    // Keine Übung ausgewählt
+    if (!selectedPlanExercise) {
+        const exercisesWithEntries = [...new Set(planEntries.map(e => e.exercise))];
+        if (exercisesWithEntries.length === 0) {
+            planList.innerHTML = `
+                <div class="empty-state">
+                    <p>Noch keine Einträge vorhanden.</p>
+                    <p>Füge oben deine erste Übung hinzu!</p>
+                </div>
+            `;
+        } else {
+            planList.innerHTML = `
+                <div class="empty-state">
+                    <p>Wähle oben eine Übung aus, um die Einträge zu sehen.</p>
+                    <p>${exercisesWithEntries.length} Übung${exercisesWithEntries.length !== 1 ? 'en' : ''} mit Einträgen vorhanden.</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    // Gefilterte Einträge
+    const filteredEntries = planEntries.filter(e => e.exercise === selectedPlanExercise);
+
+    if (filteredEntries.length === 0) {
         planList.innerHTML = `
             <div class="empty-state">
-                <p>Noch keine Einträge vorhanden.</p>
-                <p>Füge oben deine erste Übung hinzu!</p>
+                <p>Keine Einträge für "${selectedPlanExercise}".</p>
             </div>
         `;
         return;
     }
 
-    planList.innerHTML = planEntries.map(entry => `
+    planList.innerHTML = filteredEntries.map(entry => `
         <div class="plan-entry-card">
             <div class="plan-entry-header">
                 <h4>${entry.exercise}</h4>
@@ -1090,6 +1144,7 @@ async function deletePlanEntry(id) {
         await deletePlanEntryFromCloud(id);
     }
 
+    populatePlanExerciseSelect();
     displayPlanEntries();
     showNotification('Eintrag gelöscht!');
 }
@@ -1100,8 +1155,8 @@ window.displayPlanEntries = displayPlanEntries;
 
 // Alias für Kompatibilität
 function displayTrainingPlans() {
-    displayPlanEntries();
     populatePlanExerciseSelect();
+    displayPlanEntries();
 }
 
 // ========================================

@@ -1238,6 +1238,30 @@ select:focus {
     margin-top: 10px;
 }
 
+/* Plan-Anzeige-Bereich */
+.plan-view-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+
+.plan-view-section label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.plan-view-section select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+}
+
 /* Plan-Liste */
 .plan-list {
     display: flex;

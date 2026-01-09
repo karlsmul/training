@@ -179,7 +179,17 @@
                         <button type="submit" class="btn-primary">Speichern</button>
                     </form>
 
-                    <!-- Liste der Einträge -->
+                    <!-- Übung anzeigen -->
+                    <div class="plan-view-section">
+                        <div class="form-group">
+                            <label for="planViewExercise">Einträge anzeigen für:</label>
+                            <select id="planViewExercise">
+                                <option value="">-- Übung wählen --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Liste der Einträge (gefiltert) -->
                     <div id="planList" class="plan-list">
                         <!-- Wird dynamisch gefüllt -->
                     </div>
@@ -364,14 +374,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=29"></script>
-    <script src="sync.js?v=29"></script>
+    <script src="firebase-config.js?v=30"></script>
+    <script src="sync.js?v=30"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=29"></script>
+    <script src="plan-analysis.js?v=30"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=29"></script>
+    <script src="app.js?v=30"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -383,7 +393,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v29') {
+                        if (cacheName !== 'krafttraining-v30') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -393,7 +403,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=29')
+                navigator.serviceWorker.register('/service-worker.js?v=30')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
