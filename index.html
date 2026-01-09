@@ -311,6 +311,15 @@
                             <button type="submit" class="btn-primary">Gewicht hinzufügen</button>
                         </form>
 
+                        <!-- Zielgewicht -->
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                            <div class="form-group">
+                                <label for="targetWeight">Zielgewicht (kg):</label>
+                                <input type="number" id="targetWeight" step="0.1" placeholder="Optional">
+                                <button onclick="saveTargetWeight()" class="btn-primary" style="margin-top: 10px;">Zielgewicht speichern</button>
+                            </div>
+                        </div>
+
                         <!-- Gewichtshistorie ausgeblendet, Daten bleiben gespeichert -->
                         <div id="bodyWeightHistory" class="body-weight-history" style="display: none;">
                         </div>

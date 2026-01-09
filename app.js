@@ -60,7 +60,7 @@ let trainingPlans = (JSON.parse(localStorage.getItem('trainingPlans')) || []).fi
 );
 let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
-let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null };
+let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null, targetWeight: null };
 let exercises = JSON.parse(localStorage.getItem('exercises')) || [];
 
 // Edit-Modus Tracking
@@ -1265,6 +1265,36 @@ async function deleteBodyWeight(id) {
     showNotification('Eintrag gelöscht!');
 }
 
+// Zielgewicht speichern
+function saveTargetWeight() {
+    const targetWeightInput = document.getElementById('targetWeight');
+    const targetWeight = parseFloat(targetWeightInput.value);
+
+    if (targetWeight && targetWeight > 0) {
+        personalInfo.targetWeight = targetWeight;
+    } else {
+        personalInfo.targetWeight = null; // Leer = kein Zielgewicht
+    }
+
+    localStorage.setItem('personalInfo', JSON.stringify(personalInfo));
+
+    // Sync zur Cloud
+    if (typeof syncPersonalInfoToCloud === 'function') {
+        syncPersonalInfoToCloud();
+    }
+
+    updateBodyWeightChart();
+    showNotification('Zielgewicht gespeichert!');
+}
+
+// Zielgewicht beim App-Start laden
+function loadTargetWeight() {
+    const targetWeightInput = document.getElementById('targetWeight');
+    if (targetWeightInput && personalInfo.targetWeight) {
+        targetWeightInput.value = personalInfo.targetWeight;
+    }
+}
+
 // ========================================
 // ÜBUNGSLISTE VERWALTEN
 // ========================================
@@ -2079,9 +2109,12 @@ function updateBodyWeightChart() {
 
     const data = sortedWeights.map(w => w.weight);
 
+    // Zielgewicht laden
+    const targetWeight = personalInfo.targetWeight;
+
     // Berechne sinnvollen Y-Achsen-Bereich (±3 kg vom Min/Max, auf ganze kg gerundet)
-    const minWeight = Math.min(...data);
-    const maxWeight = Math.max(...data);
+    const minWeight = Math.min(...data, targetWeight || Infinity);
+    const maxWeight = Math.max(...data, targetWeight || -Infinity);
     const padding = 3; // kg Puffer oben und unten
     const yMin = Math.floor(minWeight - padding);
     const yMax = Math.ceil(maxWeight + padding);
@@ -2090,21 +2123,40 @@ function updateBodyWeightChart() {
         bodyWeightChart.destroy();
     }
 
+    // Datasets vorbereiten
+    const datasets = [{
+        label: 'Körpergewicht (kg)',
+        data: data,
+        borderColor: '#667eea',
+        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+        pointHoverRadius: 6
+    }];
+
+    // Zielgewicht als rote Linie hinzufügen (falls vorhanden)
+    if (targetWeight) {
+        datasets.push({
+            label: 'Zielgewicht (kg)',
+            data: new Array(labels.length).fill(targetWeight),
+            borderColor: '#e74c3c',
+            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+            borderDash: [5, 5],
+            tension: 0,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            borderWidth: 2
+        });
+    }
+
     const ctx = canvas.getContext('2d');
     bodyWeightChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Körpergewicht (kg)',
-                data: data,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                tension: 0.3,
-                fill: true,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
+            datasets: datasets
         },
         options: {
             responsive: true,
@@ -2527,6 +2579,8 @@ window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
 window.populateTotalRepsExerciseDropdown = populateTotalRepsExerciseDropdown;
 window.initStrengthIndex = initStrengthIndex;
+window.saveTargetWeight = saveTargetWeight;
+window.updateBodyWeightChart = updateBodyWeightChart;
 
 // ========================================
 // APP INITIALISIERUNG
@@ -2541,6 +2595,7 @@ async function initApp() {
     displayTrainingPlans();
     displayBodyWeightHistory();
     displayExerciseList();
+    loadTargetWeight(); // Zielgewicht laden
     updateStatistics();
 
     // Login Event Listener hinzufügen

@@ -183,6 +183,9 @@ async function syncFromCloud() {
       if (cloudPersonalInfo.height !== undefined) {
         personalInfo.height = cloudPersonalInfo.height;
       }
+      if (cloudPersonalInfo.targetWeight !== undefined) {
+        personalInfo.targetWeight = cloudPersonalInfo.targetWeight;
+      }
 
       // Merge Übungen: Lokale Übungen haben ABSOLUTE Priorität
       if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises) && cloudPersonalInfo.exercises.length > 0) {
@@ -696,6 +699,16 @@ function startRealtimeSync() {
         if (data.height !== undefined && data.height !== personalInfo.height) {
           personalInfo.height = data.height;
           updated = true;
+        }
+
+        if (data.targetWeight !== undefined && data.targetWeight !== personalInfo.targetWeight) {
+          personalInfo.targetWeight = data.targetWeight;
+          updated = true;
+
+          // Chart aktualisieren wenn Zielgewicht geändert wurde
+          if (typeof window.updateBodyWeightChart === 'function') {
+            window.updateBodyWeightChart();
+          }
         }
 
         if (data.exercises && Array.isArray(data.exercises) && data.exercises.length > 0) {
