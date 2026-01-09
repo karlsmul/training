@@ -2706,6 +2706,31 @@ async function initApp() {
         console.log('Modal-Close Event Listener hinzugefügt');
     }
 
+    // Event Listener für Passwort ändern
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+
+            if (newPassword !== confirmNewPassword) {
+                showNotification('❌ Passwörter stimmen nicht überein');
+                return;
+            }
+
+            if (typeof window.changePassword === 'function') {
+                const success = await window.changePassword(currentPassword, newPassword);
+                if (success) {
+                    changePasswordForm.reset();
+                }
+            } else {
+                showNotification('Passwort ändern nicht verfügbar');
+            }
+        });
+    }
+
     // Event Listener für Google-Login-Button
     const googleLoginButton = document.getElementById('googleLoginButton');
     if (googleLoginButton) {

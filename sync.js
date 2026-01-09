@@ -902,9 +902,12 @@ async function registerWithEmail(email, password) {
     }
 
     console.log('Versuche Registrierung für:', email);
-    await auth.createUserWithEmailAndPassword(email, password);
-    console.log('Registrierung erfolgreich!');
-    showNotification('✅ Konto erstellt und angemeldet!');
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+
+    // E-Mail-Verifizierung senden
+    await userCredential.user.sendEmailVerification();
+    console.log('Registrierung erfolgreich, Verifizierungs-E-Mail gesendet!');
+    showNotification('✅ Konto erstellt! Bitte bestätige deine E-Mail-Adresse.');
     hideLoginModal();
   } catch (error) {
     console.error('Registrierungs-Fehler:', error);
@@ -949,6 +952,60 @@ async function resetPassword(email) {
     } else {
       showNotification('❌ Fehler: ' + error.message);
     }
+  }
+}
+
+// Passwort ändern (für eingeloggte User)
+async function changePassword(currentPassword, newPassword) {
+  try {
+    if (!auth || !auth.currentUser) {
+      showNotification('⚠️ Bitte zuerst anmelden');
+      return false;
+    }
+
+    const user = auth.currentUser;
+
+    if (newPassword.length < 6) {
+      showNotification('❌ Neues Passwort muss mindestens 6 Zeichen lang sein');
+      return false;
+    }
+
+    // Re-Authentifizierung erforderlich für sensible Operationen
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    await user.reauthenticateWithCredential(credential);
+
+    // Passwort ändern
+    await user.updatePassword(newPassword);
+    showNotification('✅ Passwort erfolgreich geändert!');
+    return true;
+  } catch (error) {
+    console.error('Passwort-Änderung Fehler:', error);
+    if (error.code === 'auth/wrong-password') {
+      showNotification('❌ Aktuelles Passwort ist falsch');
+    } else if (error.code === 'auth/weak-password') {
+      showNotification('❌ Neues Passwort ist zu schwach');
+    } else if (error.code === 'auth/requires-recent-login') {
+      showNotification('❌ Bitte melde dich erneut an und versuche es nochmal');
+    } else {
+      showNotification('❌ Fehler: ' + error.message);
+    }
+    return false;
+  }
+}
+
+// Verifizierungs-E-Mail erneut senden
+async function resendVerificationEmail() {
+  try {
+    if (!auth || !auth.currentUser) {
+      showNotification('⚠️ Bitte zuerst anmelden');
+      return;
+    }
+
+    await auth.currentUser.sendEmailVerification();
+    showNotification('✅ Verifizierungs-E-Mail gesendet!');
+  } catch (error) {
+    console.error('Verifizierungs-E-Mail Fehler:', error);
+    showNotification('❌ Fehler: ' + error.message);
   }
 }
 
@@ -1001,6 +1058,37 @@ function showUserInfo(user) {
     </div>
   `;
   userInfoElement.style.display = 'flex';
+
+  // Konto-Einstellungen in Settings anzeigen
+  const accountSettings = document.getElementById('accountSettings');
+  const accountEmail = document.getElementById('accountEmail');
+  const accountVerified = document.getElementById('accountVerified');
+  const resendSection = document.getElementById('resendVerificationSection');
+
+  if (accountSettings) {
+    accountSettings.style.display = 'block';
+
+    if (accountEmail) {
+      accountEmail.textContent = user.email || '-';
+    }
+
+    if (accountVerified) {
+      if (user.emailVerified) {
+        accountVerified.innerHTML = '<span style="color: #4caf50;">✅ Verifiziert</span>';
+        if (resendSection) resendSection.style.display = 'none';
+      } else {
+        accountVerified.innerHTML = '<span style="color: #ff9800;">⚠️ Nicht verifiziert</span>';
+        if (resendSection) resendSection.style.display = 'block';
+      }
+    }
+
+    // Passwort ändern nur für E-Mail-Nutzer (nicht Google)
+    const passwordSection = document.querySelector('.password-change-details');
+    if (passwordSection) {
+      const isEmailUser = user.providerData && user.providerData.some(p => p.providerId === 'password');
+      passwordSection.style.display = isEmailUser ? 'block' : 'none';
+    }
+  }
 }
 
 // Benutzer-Info verstecken
@@ -1019,6 +1107,12 @@ function hideUserInfo() {
     userInfoElement.innerHTML = `
       <button class="btn-login" id="loginButton">Anmelden für Cloud-Sync</button>
     `;
+  }
+
+  // Konto-Einstellungen verstecken
+  const accountSettings = document.getElementById('accountSettings');
+  if (accountSettings) {
+    accountSettings.style.display = 'none';
   }
 }
 
@@ -1073,6 +1167,8 @@ window.loginWithGoogle = loginWithGoogle;
 window.loginWithEmail = loginWithEmail;
 window.registerWithEmail = registerWithEmail;
 window.resetPassword = resetPassword;
+window.changePassword = changePassword;
+window.resendVerificationEmail = resendVerificationEmail;
 window.logout = logout;
 window.showLoginModal = showLoginModal;
 window.hideLoginModal = hideLoginModal;
