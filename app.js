@@ -231,7 +231,8 @@ const weightNoteExerciseSelect = document.getElementById('weightNoteExercise');
 const weightNotesFilterExercise = document.getElementById('weightNotesFilterExercise');
 
 // Trainingshistorie Filter
-const historyExerciseFilter = document.getElementById('historyExerciseFilter');
+const searchInput = document.getElementById('searchExercise');
+const historyDateSelect = document.getElementById('historyDateSelect');
 
 // Settings elements
 const bodyDataForm = document.getElementById('bodyDataForm');
@@ -412,28 +413,6 @@ function populateExerciseDropdown() {
 
         if (filterCurrentValue && exercises.includes(filterCurrentValue)) {
             weightNotesFilterExercise.value = filterCurrentValue;
-        }
-    }
-
-    // Trainingshistorie Filter-Dropdown füllen (aus tatsächlichen Trainings)
-    if (historyExerciseFilter) {
-        const historyFilterValue = historyExerciseFilter.value;
-        historyExerciseFilter.innerHTML = '<option value="">-- Übung wählen --</option>';
-
-        // Übungen aus den tatsächlichen Trainings holen (nicht aus der Übungsliste)
-        const trainedExercises = [...new Set(trainings.map(t => t.exercise))].sort();
-
-        trainedExercises.forEach(exercise => {
-            const option = document.createElement('option');
-            option.value = exercise;
-            // Anzahl der Trainings für diese Übung anzeigen
-            const count = trainings.filter(t => t.exercise === exercise).length;
-            option.textContent = `${exercise} (${count})`;
-            historyExerciseFilter.appendChild(option);
-        });
-
-        if (historyFilterValue && trainedExercises.includes(historyFilterValue)) {
-            historyExerciseFilter.value = historyFilterValue;
         }
     }
 
@@ -660,38 +639,48 @@ clearHistoryBtn.addEventListener('click', function() {
 // TRAININGS ANZEIGEN
 // ========================================
 
-// Globale Variable für ausgewählte Übung in der Historie
-let selectedHistoryExercise = null;
+// Globale Variable für aktuell ausgewähltes Datum in der Historie
+let selectedHistoryDate = null;
 
-// Historie-Dropdown aktualisieren (aus tatsächlichen Trainings)
-function updateHistoryExerciseDropdown() {
-    if (!historyExerciseFilter) return;
+function populateHistoryDateDropdown() {
+    if (!historyDateSelect) return [];
 
-    const currentValue = historyExerciseFilter.value;
-    historyExerciseFilter.innerHTML = '<option value="">-- Übung wählen --</option>';
+    // Alle einzigartigen Trainingstage sammeln (neueste zuerst)
+    const allDates = [...new Set(trainings.map(t => t.date))].sort((a, b) => new Date(b) - new Date(a));
 
-    // Übungen aus den tatsächlichen Trainings holen
-    const trainedExercises = [...new Set(trainings.map(t => t.exercise))].sort();
-
-    trainedExercises.forEach(exercise => {
-        const option = document.createElement('option');
-        option.value = exercise;
-        const count = trainings.filter(t => t.exercise === exercise).length;
-        option.textContent = `${exercise} (${count})`;
-        historyExerciseFilter.appendChild(option);
-    });
-
-    // Wert wiederherstellen falls vorhanden
-    if (currentValue && trainedExercises.includes(currentValue)) {
-        historyExerciseFilter.value = currentValue;
+    if (allDates.length === 0) {
+        historyDateSelect.innerHTML = '<option value="">Keine Trainings</option>';
+        selectedHistoryDate = null;
+        return [];
     }
+
+    // Dropdown befüllen
+    historyDateSelect.innerHTML = allDates.map(date => {
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('de-DE', {
+            weekday: 'short',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        const trainingsCount = trainings.filter(t => t.date === date).length;
+        return `<option value="${date}">${formattedDate} (${trainingsCount})</option>`;
+    }).join('');
+
+    // IMMER das neueste Datum als Standard setzen, wenn keins ausgewählt
+    if (!selectedHistoryDate || !allDates.includes(selectedHistoryDate)) {
+        selectedHistoryDate = allDates[0];
+    }
+
+    historyDateSelect.value = selectedHistoryDate;
+    return allDates;
 }
 
 function displayTrainings() {
     if (!trainingList) return;
 
     // Dropdown aktualisieren
-    updateHistoryExerciseDropdown();
+    const allDates = populateHistoryDateDropdown();
 
     // Keine Trainings vorhanden
     if (trainings.length === 0) {
@@ -704,135 +693,137 @@ function displayTrainings() {
         return;
     }
 
-    // Keine Übung ausgewählt
-    selectedHistoryExercise = historyExerciseFilter ? historyExerciseFilter.value : null;
-
-    if (!selectedHistoryExercise) {
-        trainingList.innerHTML = `
-            <div class="empty-state">
-                <p>Wähle eine Übung aus dem Dropdown-Menü, um deine Trainingshistorie zu sehen.</p>
-            </div>
-        `;
-        return;
-    }
-
-    // Trainings für diese Übung filtern (neueste zuerst)
-    const trainingsForExercise = trainings
-        .filter(t => t.exercise === selectedHistoryExercise)
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    if (trainingsForExercise.length === 0) {
-        trainingList.innerHTML = `
-            <div class="empty-state">
-                <p>Keine Trainings für "${selectedHistoryExercise}" gefunden.</p>
-            </div>
-        `;
-        return;
-    }
-
-    // Trainings nach Datum gruppieren
-    const trainingsByDate = {};
-    trainingsForExercise.forEach(training => {
-        if (!trainingsByDate[training.date]) {
-            trainingsByDate[training.date] = [];
+    // Sicherstellen, dass ein Datum ausgewählt ist
+    if (!selectedHistoryDate && allDates.length > 0) {
+        selectedHistoryDate = allDates[0];
+        if (historyDateSelect) {
+            historyDateSelect.value = selectedHistoryDate;
         }
-        trainingsByDate[training.date].push(training);
+    }
+
+    // Trainings für den ausgewählten Tag
+    let trainingsOfDay = trainings.filter(t => t.date === selectedHistoryDate);
+
+    // Suchfilter anwenden (falls Suchbegriff eingegeben)
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    if (searchTerm) {
+        trainingsOfDay = trainingsOfDay.filter(training =>
+            training.exercise.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    if (trainingsOfDay.length === 0) {
+        trainingList.innerHTML = `
+            <div class="empty-state">
+                <p>${searchTerm ? `Keine Übung "${searchTerm}" an diesem Tag gefunden.` : 'Keine Übungen für diesen Tag.'}</p>
+            </div>
+        `;
+        return;
+    }
+
+    const dateObj = new Date(selectedHistoryDate);
+    const formattedDate = dateObj.toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
     });
 
-    // HTML für jedes Datum generieren
-    const datesHTML = Object.keys(trainingsByDate)
-        .sort((a, b) => new Date(b) - new Date(a))
-        .map(date => {
-            const dateObj = new Date(date);
-            const formattedDate = dateObj.toLocaleDateString('de-DE', {
-                weekday: 'short',
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
+    // Borg-Wert für diesen Tag laden
+    const dailyBorg = dailyBorgValues.find(b => b.date === selectedHistoryDate);
+    const borgValue = dailyBorg ? dailyBorg.borgValue : null;
+    const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
 
-            const trainingsHTML = trainingsByDate[date].map(training => {
-                // Reps anzeigen
-                const repsDisplay = Array.isArray(training.reps)
-                    ? training.reps.join(', ')
-                    : training.reps || '0';
+    const trainingsHTML = trainingsOfDay.map(training => {
+        const repsDisplay = Array.isArray(training.reps)
+            ? training.reps.join(', ')
+            : training.reps || '0';
 
-                // Summe der Wiederholungen
-                const totalReps = Array.isArray(training.reps)
-                    ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
-                    : parseInt(training.reps || 0);
+        const totalReps = Array.isArray(training.reps)
+            ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
+            : parseInt(training.reps || 0);
 
-                // Gewicht oder Zeit anzeigen
-                let valueDisplay = '';
-                if (training.trainingType === 'time') {
-                    const mins = training.timeMinutes || 0;
-                    const secs = training.timeSeconds || 0;
-                    valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
-                } else {
-                    if (training.weightsPerSet && training.weightsPerSet.length > 0) {
-                        valueDisplay = training.weightsPerSet.join(' / ') + ' kg';
-                    } else if (training.weight) {
-                        valueDisplay = `${training.weight} kg`;
-                    } else {
-                        valueDisplay = 'Körpergewicht';
-                    }
-                }
+        let valueDisplay = '';
+        if (training.trainingType === 'time') {
+            const mins = training.timeMinutes || 0;
+            const secs = training.timeSeconds || 0;
+            valueDisplay = `${mins > 0 ? mins + ' min ' : ''}${secs} sek`;
+        } else {
+            if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+                valueDisplay = training.weightsPerSet.join(' / ') + ' kg';
+            } else if (training.weight) {
+                valueDisplay = `${training.weight} kg`;
+            } else {
+                valueDisplay = 'Körpergewicht';
+            }
+        }
 
-                return `
-                    <div class="training-item">
-                        <div class="training-info">
-                            <div class="training-details">
-                                <div class="detail-item">
-                                    <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
-                                    <div class="detail-value">${valueDisplay}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Sätze</div>
-                                    <div class="detail-value">${training.sets}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Wdh.</div>
-                                    <div class="detail-value">${repsDisplay}</div>
-                                </div>
-                                <div class="detail-item">
-                                    <div class="detail-label">Gesamt</div>
-                                    <div class="detail-value">${totalReps}</div>
-                                </div>
-                            </div>
+        return `
+            <div class="training-item">
+                <div class="training-info">
+                    <h3>${training.exercise}</h3>
+                    <div class="training-details">
+                        <div class="detail-item">
+                            <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
+                            <div class="detail-value">${valueDisplay}</div>
                         </div>
-                        <div class="training-actions">
-                            <button class="edit-btn" onclick="editTraining(${training.id})">Bearbeiten</button>
-                            <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
+                        <div class="detail-item">
+                            <div class="detail-label">Sätze</div>
+                            <div class="detail-value">${training.sets}</div>
                         </div>
-                    </div>
-                `;
-            }).join('');
-
-            return `
-                <div class="date-block">
-                    <div class="date-header-simple">
-                        <span class="date-icon">📅</span>
-                        <span class="date-title">${formattedDate}</span>
-                    </div>
-                    <div class="date-trainings">
-                        ${trainingsHTML}
+                        <div class="detail-item">
+                            <div class="detail-label">Wiederholungen</div>
+                            <div class="detail-value">${repsDisplay}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Gesamt Wdh.</div>
+                            <div class="detail-value">${totalReps}</div>
+                        </div>
                     </div>
                 </div>
-            `;
-        }).join('');
+                <div class="training-actions">
+                    <button class="edit-btn" onclick="editTraining(${training.id})">Bearbeiten</button>
+                    <button class="delete-btn" onclick="deleteTraining(${training.id})">Löschen</button>
+                </div>
+            </div>
+        `;
+    }).join('');
 
     trainingList.innerHTML = `
-        <div class="exercise-history-header">
-            <h3>${selectedHistoryExercise}</h3>
-            <span class="training-count">${trainingsForExercise.length} Einträge</span>
+        <div class="date-block">
+            <div class="date-header">
+                <div class="date-icon">📅</div>
+                <h3 class="date-title">${formattedDate}</h3>
+                <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
+            </div>
+            <div class="borg-day-container">
+                <label>Wie war das Training heute?</label>
+                <div class="borg-day-input">
+                    <input type="range" min="1" max="10" value="${borgValue || 5}"
+                           onchange="saveDailyBorg('${selectedHistoryDate}', this.value)"
+                           oninput="updateBorgDisplay('${selectedHistoryDate}', this.value)"
+                           class="borg-slider">
+                    <span class="borg-display" id="borg-${selectedHistoryDate}" style="color: ${borgColor}">
+                        ${borgValue ? borgValue + '/10' : '?/10'}
+                    </span>
+                </div>
+            </div>
+            <div class="date-trainings">
+                ${trainingsHTML}
+            </div>
         </div>
-        ${datesHTML}
     `;
 }
 
-// Event Listener für Übungs-Filter
-if (historyExerciseFilter) {
-    historyExerciseFilter.addEventListener('change', displayTrainings);
+// Event Listener für Suche und Datums-Auswahl
+if (searchInput) {
+    searchInput.addEventListener('input', displayTrainings);
+}
+if (historyDateSelect) {
+    historyDateSelect.addEventListener('change', function() {
+        selectedHistoryDate = this.value;
+        displayTrainings();
+    });
 }
 
 // ========================================
