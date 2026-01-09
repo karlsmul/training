@@ -1080,12 +1080,19 @@ function displayPersonalRecords() {
 // PLAN-TEMPLATES VERWALTUNG
 // ========================================
 
-// Standard-Template beim ersten Start erstellen
+// Standard-Templates beim ersten Start erstellen
 if (planTemplates.length === 0) {
     planTemplates.push({
         id: Date.now(),
-        name: '10x6x4',
-        sets: [10, 6, 4]
+        name: '10x6x3',
+        numSets: 4,
+        targetReps: [10, 6, 3] // Wiederholungsziele für verschiedene Trainingstage
+    });
+    planTemplates.push({
+        id: Date.now() + 1,
+        name: 'Klimmzüge 4x10',
+        numSets: 4,
+        targetReps: [10] // Jede Woche 4 Sätze à 10 Wdh.
     });
     localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
 }
@@ -1095,15 +1102,16 @@ planTemplateForm.addEventListener('submit', function(e) {
     e.preventDefault();
 
     const name = document.getElementById('templateName').value.trim();
-    const setsInput = document.getElementById('templateSets').value.trim();
+    const numSets = parseInt(document.getElementById('templateNumSets').value);
+    const repsInput = document.getElementById('templateReps').value.trim();
 
-    if (!name || !setsInput) return;
+    if (!name || !numSets || !repsInput) return;
 
-    // Parse Sätze
-    const sets = setsInput.split(',').map(s => parseInt(s.trim())).filter(s => s > 0);
+    // Parse Wiederholungsziele
+    const targetReps = repsInput.split(',').map(s => parseInt(s.trim())).filter(s => s > 0);
 
-    if (sets.length === 0) {
-        showNotification('⚠️ Bitte gültige Sätze eingeben (z.B. 10,6,3,4)');
+    if (targetReps.length === 0) {
+        showNotification('⚠️ Bitte gültige Wiederholungsziele eingeben (z.B. 10,6,3)');
         return;
     }
 
@@ -1116,7 +1124,8 @@ planTemplateForm.addEventListener('submit', function(e) {
     const template = {
         id: Date.now(),
         name: name,
-        sets: sets
+        numSets: numSets,
+        targetReps: targetReps
     };
 
     planTemplates.push(template);
@@ -1130,6 +1139,7 @@ planTemplateForm.addEventListener('submit', function(e) {
     displayPlanTemplates();
     populateTemplateDropdown();
     planTemplateForm.reset();
+    document.getElementById('templateNumSets').value = 4; // Reset auf 4
     showNotification('Template erstellt!');
 });
 
