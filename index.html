@@ -149,7 +149,7 @@
                 <div id="planTab" class="tab-content">
                     <div class="plan-header">
                         <h2>Trainingseinheiten</h2>
-                        <p class="plan-subtitle">Erstelle Trainings mit mehreren Übungen und Zielgewichten</p>
+                        <p class="plan-subtitle">Erstelle Trainings mit Übungen und individuellen Zielgewichten</p>
                     </div>
 
                     <!-- Trainingseinheit auswählen oder neu erstellen -->
@@ -398,7 +398,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v25') {
+                        if (cacheName !== 'krafttraining-v26') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }

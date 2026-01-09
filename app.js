@@ -1101,9 +1101,30 @@ function renderWorkoutExercises() {
     }
 
     workoutExerciseList.innerHTML = currentWorkoutExercises.map((ex, index) => {
-        const w10Display = ex.bodyweight ? 'KG' : (ex.weight10 ? ex.weight10 : '--');
-        const w6Display = ex.bodyweight ? 'KG' : (ex.weight6 ? ex.weight6 : '--');
-        const w3Display = ex.bodyweight ? 'KG' : (ex.weight3 ? ex.weight3 : '--');
+        // Gewichts-Einträge rendern (flexibel: reps -> weight)
+        const weights = ex.weights || [];
+        const weightsHtml = weights.map((w, wIndex) => `
+            <div class="weight-entry">
+                <div class="weight-entry-inputs">
+                    <input type="number"
+                           class="reps-input"
+                           value="${w.reps || ''}"
+                           placeholder="Wdh"
+                           min="1"
+                           onchange="updateWeightEntry(${index}, ${wIndex}, 'reps', this.value)">
+                    <span class="weight-separator">×</span>
+                    <input type="number"
+                           class="weight-input"
+                           value="${w.weight || ''}"
+                           placeholder="kg"
+                           step="0.5"
+                           ${ex.bodyweight ? 'disabled' : ''}
+                           onchange="updateWeightEntry(${index}, ${wIndex}, 'weight', this.value)">
+                    <span class="weight-unit">${ex.bodyweight ? 'KG' : 'kg'}</span>
+                </div>
+                <button type="button" class="delete-btn-tiny" onclick="removeWeightEntry(${index}, ${wIndex})">×</button>
+            </div>
+        `).join('');
 
         return `
             <div class="workout-exercise-card" data-index="${index}">
@@ -1111,43 +1132,23 @@ function renderWorkoutExercises() {
                     <h4>${ex.exercise}</h4>
                     <button type="button" class="delete-btn-small" onclick="removeWorkoutExercise(${index})">×</button>
                 </div>
-                <div class="workout-exercise-weights">
-                    <div class="weight-input-group">
-                        <label>10er</label>
-                        <input type="number"
-                               value="${ex.weight10 || ''}"
-                               placeholder="--"
-                               step="0.5"
-                               ${ex.bodyweight ? 'disabled' : ''}
-                               onchange="updateWorkoutExercise(${index}, 'weight10', this.value)">
-                    </div>
-                    <div class="weight-input-group">
-                        <label>6er</label>
-                        <input type="number"
-                               value="${ex.weight6 || ''}"
-                               placeholder="--"
-                               step="0.5"
-                               ${ex.bodyweight ? 'disabled' : ''}
-                               onchange="updateWorkoutExercise(${index}, 'weight6', this.value)">
-                    </div>
-                    <div class="weight-input-group">
-                        <label>3er</label>
-                        <input type="number"
-                               value="${ex.weight3 || ''}"
-                               placeholder="--"
-                               step="0.5"
-                               ${ex.bodyweight ? 'disabled' : ''}
-                               onchange="updateWorkoutExercise(${index}, 'weight3', this.value)">
-                    </div>
-                </div>
+
                 <div class="bodyweight-toggle">
                     <label>
                         <input type="checkbox"
                                ${ex.bodyweight ? 'checked' : ''}
                                onchange="toggleBodyweight(${index}, this.checked)">
-                        Körpergewicht
+                        Körpergewicht (kein Zusatzgewicht)
                     </label>
                 </div>
+
+                <div class="workout-weights-list">
+                    ${weightsHtml || '<p class="no-weights">Noch keine Gewichte eingetragen</p>'}
+                </div>
+
+                <button type="button" class="btn-add-weight" onclick="addWeightEntry(${index})">
+                    + Wiederholung/Gewicht hinzufügen
+                </button>
             </div>
         `;
     }).join('');
@@ -1171,9 +1172,7 @@ function addExerciseToWorkout() {
 
     currentWorkoutExercises.push({
         exercise: exercise,
-        weight10: null,
-        weight6: null,
-        weight3: null,
+        weights: [], // Flexibles Array: [{reps: 10, weight: 50}, {reps: 6, weight: 60}, ...]
         bodyweight: false
     });
 
@@ -1187,10 +1186,29 @@ function removeWorkoutExercise(index) {
     renderWorkoutExercises();
 }
 
-// Übung im Workout aktualisieren
-function updateWorkoutExercise(index, field, value) {
-    if (currentWorkoutExercises[index]) {
-        currentWorkoutExercises[index][field] = value ? parseFloat(value) : null;
+// Gewichts-Eintrag hinzufügen
+function addWeightEntry(exerciseIndex) {
+    if (currentWorkoutExercises[exerciseIndex]) {
+        if (!currentWorkoutExercises[exerciseIndex].weights) {
+            currentWorkoutExercises[exerciseIndex].weights = [];
+        }
+        currentWorkoutExercises[exerciseIndex].weights.push({ reps: null, weight: null });
+        renderWorkoutExercises();
+    }
+}
+
+// Gewichts-Eintrag entfernen
+function removeWeightEntry(exerciseIndex, weightIndex) {
+    if (currentWorkoutExercises[exerciseIndex] && currentWorkoutExercises[exerciseIndex].weights) {
+        currentWorkoutExercises[exerciseIndex].weights.splice(weightIndex, 1);
+        renderWorkoutExercises();
+    }
+}
+
+// Gewichts-Eintrag aktualisieren
+function updateWeightEntry(exerciseIndex, weightIndex, field, value) {
+    if (currentWorkoutExercises[exerciseIndex] && currentWorkoutExercises[exerciseIndex].weights[weightIndex]) {
+        currentWorkoutExercises[exerciseIndex].weights[weightIndex][field] = value ? parseFloat(value) : null;
     }
 }
 
@@ -1198,10 +1216,11 @@ function updateWorkoutExercise(index, field, value) {
 function toggleBodyweight(index, checked) {
     if (currentWorkoutExercises[index]) {
         currentWorkoutExercises[index].bodyweight = checked;
-        if (checked) {
-            currentWorkoutExercises[index].weight10 = null;
-            currentWorkoutExercises[index].weight6 = null;
-            currentWorkoutExercises[index].weight3 = null;
+        // Bei Körpergewicht werden die Gewichte auf null gesetzt, aber reps bleiben erhalten
+        if (checked && currentWorkoutExercises[index].weights) {
+            currentWorkoutExercises[index].weights.forEach(w => {
+                w.weight = null;
+            });
         }
         renderWorkoutExercises();
     }
@@ -1286,7 +1305,6 @@ function displayWorkouts() {
 
     workoutOverview.innerHTML = workouts.map(workout => {
         const exerciseCount = workout.exercises.length;
-        const exerciseNames = workout.exercises.map(e => e.exercise).join(', ');
 
         return `
             <div class="workout-card" onclick="editWorkout(${workout.id})">
@@ -1296,18 +1314,30 @@ function displayWorkouts() {
                 </div>
                 <div class="workout-card-exercises">
                     ${workout.exercises.map(ex => {
-                        const weights = [];
+                        // Flexibles Format: weights Array mit {reps, weight}
+                        const weightsArr = ex.weights || [];
+                        let weightsDisplay = '';
+
                         if (ex.bodyweight) {
-                            weights.push('KG');
+                            if (weightsArr.length > 0) {
+                                weightsDisplay = weightsArr
+                                    .filter(w => w.reps)
+                                    .map(w => `${w.reps}× KG`)
+                                    .join(', ');
+                            } else {
+                                weightsDisplay = 'Körpergewicht';
+                            }
                         } else {
-                            if (ex.weight10) weights.push(`10er: ${ex.weight10}kg`);
-                            if (ex.weight6) weights.push(`6er: ${ex.weight6}kg`);
-                            if (ex.weight3) weights.push(`3er: ${ex.weight3}kg`);
+                            weightsDisplay = weightsArr
+                                .filter(w => w.reps && w.weight)
+                                .map(w => `${w.reps}×${w.weight}kg`)
+                                .join(', ') || '--';
                         }
+
                         return `
                             <div class="workout-exercise-preview">
                                 <span class="exercise-name">${ex.exercise}</span>
-                                <span class="exercise-weights">${weights.join(' | ') || '--'}</span>
+                                <span class="exercise-weights">${weightsDisplay}</span>
                             </div>
                         `;
                     }).join('')}
@@ -1351,7 +1381,9 @@ if (cancelWorkoutBtn) {
 
 // Globale Funktionen
 window.removeWorkoutExercise = removeWorkoutExercise;
-window.updateWorkoutExercise = updateWorkoutExercise;
+window.addWeightEntry = addWeightEntry;
+window.removeWeightEntry = removeWeightEntry;
+window.updateWeightEntry = updateWeightEntry;
 window.toggleBodyweight = toggleBodyweight;
 window.editWorkout = editWorkout;
 window.displayWorkouts = displayWorkouts;

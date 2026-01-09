@@ -1269,61 +1269,26 @@ select:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #667eea;
 }
 
 .workout-exercise-header h4 {
     margin: 0;
     color: #333;
-    font-size: 1rem;
-}
-
-.workout-exercise-weights {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-.weight-input-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.weight-input-group label {
-    font-size: 0.75rem;
+    font-size: 1.1rem;
     font-weight: 700;
-    color: #667eea;
-    text-transform: uppercase;
-    text-align: center;
-    margin-bottom: 4px;
 }
 
-.weight-input-group input {
-    padding: 10px;
-    border: 2px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    text-align: center;
-    transition: border-color 0.2s;
-}
-
-.weight-input-group input:focus {
-    border-color: #667eea;
-    outline: none;
-}
-
-.weight-input-group input:disabled {
-    background: #f0f0f0;
-    color: #999;
-}
-
+/* Körpergewicht Toggle - oben */
 .bodyweight-toggle {
     display: flex;
     align-items: center;
-    padding-top: 8px;
-    border-top: 1px solid #e9ecef;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
 }
 
 .bodyweight-toggle label {
@@ -1333,6 +1298,123 @@ select:focus {
     font-size: 0.9rem;
     color: #666;
     cursor: pointer;
+}
+
+.bodyweight-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+/* Gewichts-Einträge Liste */
+.workout-weights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.no-weights {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 10px;
+}
+
+.weight-entry {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.weight-entry-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.weight-entry .reps-input {
+    width: 60px;
+    padding: 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.weight-separator {
+    color: #667eea;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.weight-entry .weight-input {
+    width: 70px;
+    padding: 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.weight-entry input:focus {
+    border-color: #667eea;
+    outline: none;
+}
+
+.weight-entry input:disabled {
+    background: #e9ecef;
+    color: #999;
+}
+
+.weight-unit {
+    color: #666;
+    font-size: 0.9rem;
+    min-width: 25px;
+}
+
+.delete-btn-tiny {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.delete-btn-tiny:hover {
+    background: #ee5a5a;
+}
+
+/* Button zum Hinzufügen */
+.btn-add-weight {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+    color: #667eea;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-weight:hover {
+    background: #667eea;
+    color: white;
 }
 
 .bodyweight-toggle input[type="checkbox"] {
