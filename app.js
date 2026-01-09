@@ -1028,25 +1028,16 @@ if (planEntryForm) {
             return;
         }
 
-        // Prüfen ob schon ein Eintrag für diese Übung existiert
-        const existingIndex = planEntries.findIndex(p => p.exercise === exercise);
-
+        // Neuen Eintrag erstellen (mehrere Einträge pro Übung erlaubt)
         const entry = {
-            id: existingIndex >= 0 ? planEntries[existingIndex].id : Date.now(),
+            id: Date.now(),
             exercise,
             weight,
             sets,
             reps
         };
 
-        if (existingIndex >= 0) {
-            planEntries[existingIndex] = entry;
-            showNotification('Eintrag aktualisiert!');
-        } else {
-            planEntries.push(entry);
-            showNotification('Eintrag gespeichert!');
-        }
-
+        planEntries.push(entry);
         localStorage.setItem('planEntries', JSON.stringify(planEntries));
 
         // Sync zur Cloud
@@ -1056,6 +1047,7 @@ if (planEntryForm) {
 
         displayPlanEntries();
         planEntryForm.reset();
+        showNotification('Eintrag gespeichert!');
     });
 }
 
