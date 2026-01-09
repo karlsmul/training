@@ -1155,15 +1155,21 @@ function displayPlanTemplates() {
         return;
     }
 
-    templateList.innerHTML = planTemplates.map(template => `
-        <div class="template-item">
-            <div>
-                <span class="template-name">${template.name}</span>
-                <span class="template-sets">${template.sets.join(' → ')} Wdh.</span>
+    templateList.innerHTML = planTemplates.map(template => {
+        const repsDisplay = template.targetReps.join(', ');
+        const totalReps = template.targetReps.map(r => r * template.numSets);
+        const totalsDisplay = totalReps.join(' / ');
+
+        return `
+            <div class="template-item">
+                <div>
+                    <span class="template-name">${template.name}</span>
+                    <span class="template-sets">${template.numSets} Sätze | Ziele: ${repsDisplay} Wdh. (Gesamt: ${totalsDisplay})</span>
+                </div>
+                <button class="delete-btn" onclick="deleteTemplate(${template.id})">Löschen</button>
             </div>
-            <button class="delete-btn" onclick="deleteTemplate(${template.id})">Löschen</button>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Template löschen
@@ -1188,12 +1194,13 @@ function populateTemplateDropdown() {
     if (!planTemplateSelect) return;
 
     const currentValue = planTemplateSelect.value;
-    planTemplateSelect.innerHTML = '<option value="">Kein Plan (freies Training)</option>';
+    planTemplateSelect.innerHTML = '<option value="">-- Plan auswählen --</option>';
 
     planTemplates.forEach(template => {
         const option = document.createElement('option');
         option.value = template.id;
-        option.textContent = `${template.name} (${template.sets.join('→')} Wdh.)`;
+        const repsDisplay = template.targetReps.join(', ');
+        option.textContent = `${template.name} (${template.numSets} Sätze: ${repsDisplay} Wdh.)`;
         planTemplateSelect.appendChild(option);
     });
 
@@ -1202,30 +1209,8 @@ function populateTemplateDropdown() {
     }
 }
 
-// Gewichts-Eingabefelder basierend auf Template generieren
-planTemplateSelect.addEventListener('change', function() {
-    const templateId = parseInt(this.value);
-
-    if (!templateId) {
-        // Kein Plan gewählt
-        weightReferenceInputs.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Freies Training - keine Gewichts-Referenzen erforderlich</p>';
-        return;
-    }
-
-    const template = planTemplates.find(t => t.id === templateId);
-    if (!template) return;
-
-    // Eingabefelder für jede Wiederholungszahl generieren
-    weightReferenceInputs.innerHTML = template.sets.map((reps, index) => `
-        <div class="form-group">
-            <label for="weight${reps}Reps">Gewicht für ${reps} Wdh. (kg):</label>
-            <input type="number" id="weight${reps}Reps" step="0.5" placeholder="z.B. ${80 - index * 5}" required>
-        </div>
-    `).join('');
-});
-
 // ========================================
-// TRAININGSPLAN (Gewichte für Übungen)
+// TRAININGSPLAN (Übung → Plan Zuordnung)
 // ========================================
 
 planForm.addEventListener('submit', async function(e) {
@@ -1234,55 +1219,13 @@ planForm.addEventListener('submit', async function(e) {
     const exercise = document.getElementById('planExercise').value;
     const templateId = parseInt(planTemplateSelect.value) || null;
 
-    // Kein Template = Freies Training (keine Gewichte erforderlich)
     if (!templateId) {
-        const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
-
-        const plan = {
-            id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
-            exercise: exercise,
-            templateId: null,
-            weights: {}
-        };
-
-        if (existingPlanIndex !== -1) {
-            trainingPlans[existingPlanIndex] = plan;
-            showNotification('Übung auf freies Training gesetzt!');
-        } else {
-            trainingPlans.push(plan);
-            showNotification('Übung hinzugefügt (freies Training)!');
-        }
-
-        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
-        if (typeof syncPlanToCloud === 'function') {
-            await syncPlanToCloud(plan);
-        }
-        displayTrainingPlans();
-        planForm.reset();
-        weightReferenceInputs.innerHTML = '';
+        showNotification('⚠️ Bitte einen Plan auswählen!');
         return;
     }
 
-    // Template gewählt - Gewichte sammeln
     const template = planTemplates.find(t => t.id === templateId);
     if (!template) return;
-
-    const weights = {};
-    let hasAtLeastOneWeight = false;
-
-    // Gewichte für jede Wiederholungszahl sammeln
-    template.sets.forEach(reps => {
-        const input = document.getElementById(`weight${reps}Reps`);
-        if (input && input.value) {
-            weights[reps] = parseFloat(input.value);
-            hasAtLeastOneWeight = true;
-        }
-    });
-
-    if (!hasAtLeastOneWeight) {
-        showNotification('⚠️ Bitte mindestens ein Gewicht eingeben!');
-        return;
-    }
 
     const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
 
@@ -1290,16 +1233,15 @@ planForm.addEventListener('submit', async function(e) {
         id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
         exercise: exercise,
         templateId: templateId,
-        templateName: template.name,
-        weights: weights
+        templateName: template.name
     };
 
     if (existingPlanIndex !== -1) {
         trainingPlans[existingPlanIndex] = plan;
-        showNotification('Gewichte aktualisiert!');
+        showNotification('Plan-Zuordnung aktualisiert!');
     } else {
         trainingPlans.push(plan);
-        showNotification('Gewichte hinzugefügt!');
+        showNotification('Übung zu Plan zugeordnet!');
     }
 
     localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
@@ -1310,58 +1252,52 @@ planForm.addEventListener('submit', async function(e) {
 
     displayTrainingPlans();
     planForm.reset();
-    weightReferenceInputs.innerHTML = '';
 });
 
 function displayTrainingPlans() {
     if (trainingPlans.length === 0) {
         planList.innerHTML = `
             <div class="empty-state">
-                <p>Noch keine Übungen gespeichert.</p>
-                <p>Füge deine erste Übung hinzu! 📋</p>
+                <p>Noch keine Übungen zugeordnet.</p>
+                <p>Ordne deine erste Übung einem Plan zu! 📋</p>
             </div>
         `;
         return;
     }
 
     planList.innerHTML = trainingPlans.map(plan => {
-        // Freies Training (kein Template)
-        if (!plan.templateId) {
-            return `
-                <div class="plan-item">
-                    <div class="plan-info">
-                        <h3>${plan.exercise}</h3>
-                        <div class="plan-type">Freies Training (ohne Plan)</div>
+        const template = planTemplates.find(t => t.id === plan.templateId);
+        const templateName = template ? template.name : plan.templateName || 'Unbekannt';
+
+        let planDetails = '';
+        if (template) {
+            const repsDisplay = template.targetReps.join(', ');
+            const totalReps = template.targetReps.map(r => r * template.numSets);
+            const totalsDisplay = totalReps.join(' / ');
+            planDetails = `
+                <div class="weight-reference-table">
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">Sätze:</div>
+                        <div class="weight-ref-value">${template.numSets}</div>
                     </div>
-                    <div class="plan-actions">
-                        <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
-                        <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">Ziel-Wiederholungen:</div>
+                        <div class="weight-ref-value">${repsDisplay}</div>
+                    </div>
+                    <div class="weight-ref-row">
+                        <div class="weight-ref-label">Gesamt pro Ziel:</div>
+                        <div class="weight-ref-value">${totalsDisplay}</div>
                     </div>
                 </div>
             `;
         }
-
-        // Mit Template
-        const template = planTemplates.find(t => t.id === plan.templateId);
-        const templateName = template ? template.name : plan.templateName || 'Unbekannt';
-
-        const weightsHtml = Object.entries(plan.weights || {})
-            .sort(([a], [b]) => parseInt(b) - parseInt(a)) // Sortiere nach Wiederholungen absteigend
-            .map(([reps, weight]) => `
-                <div class="weight-ref-row">
-                    <div class="weight-ref-label">${reps} Wiederholungen:</div>
-                    <div class="weight-ref-value">${weight} kg</div>
-                </div>
-            `).join('');
 
         return `
             <div class="plan-item">
                 <div class="plan-info">
                     <h3>${plan.exercise}</h3>
                     <div class="plan-type">Plan: ${templateName}</div>
-                    <div class="weight-reference-table">
-                        ${weightsHtml || '<p style="color: #999;">Keine Gewichte gespeichert</p>'}
-                    </div>
+                    ${planDetails}
                 </div>
                 <div class="plan-actions">
                     <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
@@ -1382,21 +1318,6 @@ function editPlan(id) {
     // Template auswählen
     if (plan.templateId) {
         planTemplateSelect.value = plan.templateId;
-        // Trigger change event um Eingabefelder zu generieren
-        planTemplateSelect.dispatchEvent(new Event('change'));
-
-        // Warte kurz, dann Gewichte eintragen
-        setTimeout(() => {
-            Object.entries(plan.weights || {}).forEach(([reps, weight]) => {
-                const input = document.getElementById(`weight${reps}Reps`);
-                if (input) {
-                    input.value = weight;
-                }
-            });
-        }, 100);
-    } else {
-        planTemplateSelect.value = '';
-        planTemplateSelect.dispatchEvent(new Event('change'));
     }
 
     // Scroll zum Formular
