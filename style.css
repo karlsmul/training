@@ -630,6 +630,11 @@ select:focus {
     color: white;
 }
 
+.rep-range-badge.not-achieved {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+}
+
 .training-info h3 {
     color: #333;
     margin-bottom: 8px;

@@ -65,6 +65,16 @@
                         </select>
                     </div>
 
+                    <!-- Wiederholungsziel (falls Plan zugeordnet) -->
+                    <div class="form-group" id="targetRepsGroup" style="display: none;">
+                        <label for="targetReps">Wiederholungsziel heute:</label>
+                        <select id="targetReps">
+                            <option value="">-- Ziel wählen --</option>
+                            <!-- Wird dynamisch basierend auf Plan gefüllt -->
+                        </select>
+                        <p class="target-hint" style="font-size: 0.85rem; color: #667eea; margin-top: 5px;"></p>
+                    </div>
+
                     <!-- Toggle zwischen Gewicht und Zeit -->
                     <div class="form-group">
                         <label>Trainingsart:</label>

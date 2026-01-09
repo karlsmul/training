@@ -244,6 +244,10 @@ const exerciseForm = document.getElementById('exerciseForm');
 const exerciseList = document.getElementById('exerciseList');
 const exerciseSelect = document.getElementById('exercise');
 
+// Target Reps (Plan-Check)
+const targetRepsGroup = document.getElementById('targetRepsGroup');
+const targetRepsSelect = document.getElementById('targetReps');
+
 // ========================================
 // INITIALISIERUNG
 // ========================================
@@ -405,6 +409,73 @@ function populateExerciseDropdown() {
     console.log('Übungs-Dropdowns gefüllt mit', exercises.length, 'Übungen');
 }
 
+// Wiederholungsziel-Dropdown beim Übung-Wechsel aktualisieren
+exerciseSelect.addEventListener('change', function() {
+    const selectedExercise = this.value;
+
+    if (!selectedExercise) {
+        targetRepsGroup.style.display = 'none';
+        return;
+    }
+
+    // Prüfe ob Übung einem Plan zugeordnet ist
+    const plan = trainingPlans.find(p => p.exercise === selectedExercise);
+
+    if (!plan || !plan.templateId) {
+        targetRepsGroup.style.display = 'none';
+        return;
+    }
+
+    // Plan gefunden - Template laden
+    const template = planTemplates.find(t => t.id === plan.templateId);
+
+    if (!template || !template.targetReps || template.targetReps.length === 0) {
+        targetRepsGroup.style.display = 'none';
+        return;
+    }
+
+    // Zeige Target-Reps Dropdown
+    targetRepsGroup.style.display = 'block';
+
+    // Befülle Dropdown mit Zielen aus Template
+    targetRepsSelect.innerHTML = '<option value="">-- Ziel wählen --</option>';
+
+    template.targetReps.forEach(reps => {
+        const totalReps = reps * template.numSets;
+        const option = document.createElement('option');
+        option.value = reps;
+        option.textContent = `${reps} Wdh. pro Satz (Gesamt: ${totalReps})`;
+        targetRepsSelect.appendChild(option);
+    });
+
+    // Hint aktualisieren
+    const hint = document.querySelector('.target-hint');
+    if (hint) {
+        hint.textContent = `Plan: ${template.name} (${template.numSets} Sätze)`;
+    }
+});
+
+// Target Reps Selection - Hinweis aktualisieren
+targetRepsSelect.addEventListener('change', function() {
+    const selectedReps = parseInt(this.value);
+    const selectedExercise = exerciseSelect.value;
+
+    if (!selectedReps || !selectedExercise) return;
+
+    const plan = trainingPlans.find(p => p.exercise === selectedExercise);
+    if (!plan) return;
+
+    const template = planTemplates.find(t => t.id === plan.templateId);
+    if (!template) return;
+
+    const totalTarget = selectedReps * template.numSets;
+    const hint = document.querySelector('.target-hint');
+    if (hint) {
+        hint.textContent = `Ziel: ${template.numSets} Sätze × ${selectedReps} Wdh. = ${totalTarget} Wiederholungen gesamt`;
+        hint.style.fontWeight = '500';
+    }
+});
+
 // ========================================
 // TRAINING HINZUFÜGEN/BEARBEITEN
 // ========================================
@@ -428,6 +499,9 @@ form.addEventListener('submit', async function(e) {
         }
     }
 
+    // Wiederholungsziel (optional, wenn Plan zugeordnet)
+    const targetReps = parseInt(targetRepsSelect.value) || null;
+
     let training;
 
     if (editMode) {
@@ -444,6 +518,7 @@ form.addEventListener('submit', async function(e) {
                 timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
                 sets: numSets,
                 reps: reps,
+                targetReps: targetReps,
                 date: document.getElementById('date').value
             };
             trainings[trainingIndex] = training;
@@ -466,6 +541,7 @@ form.addEventListener('submit', async function(e) {
             timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
             sets: numSets,
             reps: reps,
+            targetReps: targetReps,
             date: document.getElementById('date').value
         };
         trainings.push(training);
@@ -626,59 +702,50 @@ clearHistoryBtn.addEventListener('click', function() {
 // ========================================
 
 /**
- * Ermittelt den Wiederholungsbereich eines Trainings basierend auf dem Plan
- * @param {Object} training - Das Training
- * @returns {string|null} '3er' | '6er' | '10er' | null
- */
-function getRepRangeType(training) {
-    if (training.trainingType === 'time') return null;
-
-    const plan = trainingPlans.find(p => p.exercise === training.exercise);
-    if (!plan) return null;
-
-    const weight = training.weightsPerSet ? training.weightsPerSet[0] : training.weight;
-    if (!weight) return null;
-
-    // Finde den passenden Wiederholungsbereich basierend auf dem Gewicht
-    // Toleranz von ±2.5 kg für Rundungen
-    const tolerance = 2.5;
-
-    if (plan.weight3Reps && Math.abs(weight - plan.weight3Reps) <= tolerance) {
-        return '3er';
-    }
-    if (plan.weight6Reps && Math.abs(weight - plan.weight6Reps) <= tolerance) {
-        return '6er';
-    }
-    if (plan.weight10Reps && Math.abs(weight - plan.weight10Reps) <= tolerance) {
-        return '10er';
-    }
-
-    return null;
-}
-
-/**
- * Prüft ob ein Training das Wiederholungsziel erreicht hat
- * @param {Object} training - Das Training
- * @returns {Object} { achieved: boolean, repRangeType: string|null, targetReps: number }
+ * Prüft ob das Wiederholungsziel für ein Training erreicht wurde
+ * Neue Logik: Gesamtwiederholungen zählen (nicht einzelne Sätze)
+ * @param {Object} training - Training-Objekt mit targetReps aus dem Plan
+ * @returns {Object} { achieved: boolean, repRangeType: string|null, targetReps: number, totalReps: number, goalReps: number }
  */
 function checkRepGoalAchieved(training) {
     if (training.trainingType === 'time') {
-        return { achieved: false, repRangeType: null, targetReps: 0 };
+        return { achieved: false, repRangeType: null, targetReps: 0, totalReps: 0, goalReps: 0 };
     }
 
-    const repRangeType = getRepRangeType(training);
-    if (!repRangeType) {
-        return { achieved: false, repRangeType: null, targetReps: 0 };
+    // Kein Wiederholungsziel gesetzt
+    if (!training.targetReps) {
+        return { achieved: false, repRangeType: null, targetReps: 0, totalReps: 0, goalReps: 0 };
     }
 
-    // Ziel-Wiederholungen pro Satz
-    const targetReps = repRangeType === '3er' ? 3 : repRangeType === '6er' ? 6 : 10;
+    // Finde den zugeordneten Plan für diese Übung
+    const plan = trainingPlans.find(p => p.exercise === training.exercise);
+    if (!plan || !plan.templateId) {
+        return { achieved: false, repRangeType: `${training.targetReps}er`, targetReps: training.targetReps, totalReps: 0, goalReps: 0 };
+    }
 
-    // Prüfe ob alle Sätze das Ziel erreicht haben
+    // Finde das Template
+    const template = planTemplates.find(t => t.id === plan.templateId);
+    if (!template) {
+        return { achieved: false, repRangeType: `${training.targetReps}er`, targetReps: training.targetReps, totalReps: 0, goalReps: 0 };
+    }
+
+    // Berechne Gesamtwiederholungen (tatsächlich)
     const repsArray = Array.isArray(training.reps) ? training.reps : [training.reps];
-    const achieved = repsArray.every(rep => parseInt(rep) >= targetReps);
+    const totalReps = repsArray.reduce((sum, rep) => sum + parseInt(rep || 0), 0);
 
-    return { achieved, repRangeType, targetReps };
+    // Berechne Ziel-Gesamtwiederholungen (targetReps × numSets)
+    const goalReps = training.targetReps * template.numSets;
+
+    // Ziel erreicht, wenn totalReps >= goalReps
+    const achieved = totalReps >= goalReps;
+
+    return {
+        achieved,
+        repRangeType: `${training.targetReps}er`,
+        targetReps: training.targetReps,
+        totalReps,
+        goalReps
+    };
 }
 
 // Globale Variable für aktuell ausgewähltes Datum in der Historie
@@ -799,9 +866,14 @@ function displayTrainings() {
         // Prüfe ob Wiederholungsziel erreicht
         const goalCheck = checkRepGoalAchieved(training);
         const achievedClass = goalCheck.achieved ? 'goal-achieved' : '';
-        const repRangeBadge = goalCheck.repRangeType
-            ? `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : ''}">${goalCheck.repRangeType}</span>`
-            : '';
+
+        // Badge mit Ziel-Info anzeigen
+        let repRangeBadge = '';
+        if (goalCheck.repRangeType && goalCheck.goalReps > 0) {
+            const checkIcon = goalCheck.achieved ? '✓' : '✗';
+            const badgeText = `${goalCheck.repRangeType} (${goalCheck.totalReps}/${goalCheck.goalReps}) ${checkIcon}`;
+            repRangeBadge = `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : 'not-achieved'}">${badgeText}</span>`;
+        }
 
         // Gewicht oder Zeit anzeigen
         let valueDisplay = '';
