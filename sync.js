@@ -183,11 +183,19 @@ async function syncFromCloud() {
     // WICHTIG: Lade Übungen DIREKT aus localStorage (nicht aus globaler Variable)
     // Dies verhindert Race Conditions beim App-Start
     const localExercises = JSON.parse(localStorage.getItem('exercises')) || [];
-    console.log('Lokale Übungen aus localStorage geladen:', localExercises.length);
+    const exercisesInitialized = localStorage.getItem('exercisesInitialized') === 'true';
+    console.log('Lokale Übungen aus localStorage geladen:', localExercises.length, '(initialisiert:', exercisesInitialized, ')');
+
+    // Standard-Übungen (zum Vergleich)
+    const DEFAULT_EXERCISES = ['Kreuzheben', 'Kniebeugen', 'Bankdrücken', 'Klimmzüge', 'Schulterdrücken'];
+
+    // Prüfe ob lokale Übungen nur Standard-Übungen sind (Auto-generiert)
+    const isDefaultExercisesOnly = localExercises.length === DEFAULT_EXERCISES.length &&
+      localExercises.every(e => DEFAULT_EXERCISES.includes(e));
 
     // Merge Personal Info und Exercises
     let hasLocalData = false;
-    let hasLocalExercises = localExercises.length > 0;
+    let hasLocalExercises = localExercises.length > 0 && !isDefaultExercisesOnly;
 
     if (userDoc.exists) {
       const cloudPersonalInfo = userDoc.data();
@@ -201,18 +209,35 @@ async function syncFromCloud() {
         personalInfo.targetWeight = cloudPersonalInfo.targetWeight;
       }
 
-      // Merge Übungen: Lokale Übungen haben ABSOLUTE Priorität
+      // Übungen-Logik: Cloud-Übungen haben Vorrang bei Kontowechsel
       if (cloudPersonalInfo.exercises && Array.isArray(cloudPersonalInfo.exercises) && cloudPersonalInfo.exercises.length > 0) {
-        // Merge lokale UND Cloud-Übungen (keine Duplikate)
-        const mergedExercises = [...new Set([...localExercises, ...cloudPersonalInfo.exercises])];
-        exercises = mergedExercises.sort();
-        console.log('✅ Übungen gemerged:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', cloudPersonalInfo.exercises.length, 'Cloud)');
+        // Cloud hat Übungen - diese sind die echten User-Übungen
+        if (isDefaultExercisesOnly) {
+          // Lokale Übungen sind nur Standard-Übungen - ersetze komplett mit Cloud
+          exercises = [...cloudPersonalInfo.exercises].sort();
+          console.log('✅ Cloud-Übungen überschreiben Standard-Übungen:', exercises.length, 'Übungen');
+        } else if (hasLocalExercises) {
+          // Lokale Übungen sind echte User-Übungen - merge mit Cloud
+          const mergedExercises = [...new Set([...localExercises, ...cloudPersonalInfo.exercises])];
+          exercises = mergedExercises.sort();
+          console.log('✅ Übungen gemerged:', exercises.length, 'Übungen (', localExercises.length, 'lokal +', cloudPersonalInfo.exercises.length, 'Cloud)');
+        } else {
+          // Keine lokalen Übungen - übernehme Cloud
+          exercises = [...cloudPersonalInfo.exercises].sort();
+          console.log('✅ Cloud-Übungen übernommen:', exercises.length, 'Übungen');
+        }
+        // Flag setzen: User hat echte Übungen
+        localStorage.setItem('exercisesInitialized', 'true');
       } else if (hasLocalExercises) {
-        // Cloud hat keine Übungen, aber wir haben lokale - behalte die lokalen
+        // Cloud hat keine Übungen, aber wir haben echte lokale - behalte die lokalen
         exercises = [...localExercises];
         console.log('✅ Keine Cloud-Übungen, behalte lokale:', exercises.length, 'Übungen');
+      } else if (isDefaultExercisesOnly) {
+        // Nur Standard-Übungen und keine Cloud-Übungen - behalte Standard
+        exercises = [...localExercises];
+        console.log('✅ Behalte Standard-Übungen (keine Cloud-Übungen vorhanden)');
       } else {
-        // Weder lokal noch Cloud haben Übungen
+        // Weder lokal noch Cloud haben Übungen - Standard-Übungen wurden bereits in app.js gesetzt
         exercises = [];
         console.log('⚠️ Keine Übungen vorhanden (weder lokal noch Cloud)');
       }

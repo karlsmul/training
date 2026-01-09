@@ -21,7 +21,7 @@
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
 
-    <link rel="stylesheet" href="style.css?v=37">
+    <link rel="stylesheet" href="style.css?v=38">
 </head>
 <body>
     <div class="container">
@@ -386,14 +386,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=37"></script>
-    <script src="sync.js?v=37"></script>
+    <script src="firebase-config.js?v=38"></script>
+    <script src="sync.js?v=38"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=37"></script>
+    <script src="plan-analysis.js?v=38"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=37"></script>
+    <script src="app.js?v=38"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -405,7 +405,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v37') {
+                        if (cacheName !== 'krafttraining-v38') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -415,7 +415,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=37')
+                navigator.serviceWorker.register('/service-worker.js?v=38')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

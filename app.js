@@ -61,11 +61,19 @@ let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null, targetWeight: null };
 let exercises = JSON.parse(localStorage.getItem('exercises')) || [];
 
-// Standard-Übungen hinzufügen, falls keine vorhanden
-if (exercises.length === 0) {
+// Standard-Übungen NUR hinzufügen, wenn der User noch nie Übungen hatte
+// Das Flag 'exercisesInitialized' verhindert, dass bei Kontowechsel Standard-Übungen geladen werden
+const exercisesInitialized = localStorage.getItem('exercisesInitialized') === 'true';
+
+if (exercises.length === 0 && !exercisesInitialized) {
+    // Nur bei komplett neuem User ohne Übungen die Standard-Übungen setzen
     exercises = ['Kreuzheben', 'Kniebeugen', 'Bankdrücken', 'Klimmzüge', 'Schulterdrücken'];
     localStorage.setItem('exercises', JSON.stringify(exercises));
-    console.log('Standard-Übungen hinzugefügt:', exercises);
+    localStorage.setItem('exercisesInitialized', 'true');
+    console.log('Standard-Übungen für neuen User hinzugefügt:', exercises);
+} else if (exercises.length > 0) {
+    // User hat bereits Übungen - Flag setzen falls noch nicht vorhanden
+    localStorage.setItem('exercisesInitialized', 'true');
 }
 
 // Edit-Modus Tracking
