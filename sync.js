@@ -221,7 +221,7 @@ async function syncFromCloud() {
 
     displayTrainings();
     displayPersonalRecords();
-    if (typeof displayWeightNotes === 'function') displayWeightNotes();
+    if (typeof displayTrainingPlans === 'function') displayTrainingPlans();
     displayBodyWeightHistory();
     populateExerciseDropdown();
     displayExerciseList();
@@ -478,7 +478,7 @@ function manualUpdateUI() {
   // Update alle UI-Elemente
   displayTrainings();
   displayPersonalRecords();
-  if (typeof displayWeightNotes === 'function') displayWeightNotes();
+  if (typeof displayTrainingPlans === 'function') displayTrainingPlans();
   displayBodyWeightHistory();
   populateExerciseDropdown();
   displayExerciseList();
