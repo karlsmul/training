@@ -1084,8 +1084,8 @@ function displayPersonalRecords() {
 if (planTemplates.length === 0) {
     planTemplates.push({
         id: Date.now(),
-        name: '4x10x6x3',
-        sets: [10, 6, 3, 4]
+        name: '10x6x4',
+        sets: [10, 6, 4]
     });
     localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
 }
