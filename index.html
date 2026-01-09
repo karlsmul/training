@@ -148,11 +148,43 @@
                 <!-- Training Plan Tab -->
                 <div id="planTab" class="tab-content">
                     <div class="plan-header">
-                        <h2>Aktuelle Gewichte</h2>
-                        <p class="plan-subtitle">Deine Gewichts-Referenzen für verschiedene Wiederholungsbereiche</p>
+                        <h2>Trainingsplan-Verwaltung</h2>
+                        <p class="plan-subtitle">Verwalte deine Trainingspläne und Gewichts-Referenzen</p>
                     </div>
 
-                    <div class="plan-form-container">
+                    <!-- Plan-Templates verwalten -->
+                    <div class="plan-templates-section">
+                        <h3>Plan-Templates</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                            Erstelle Trainingsplan-Vorlagen (z.B. "4x10x6x3" oder "4x10")
+                        </p>
+
+                        <form id="planTemplateForm">
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="templateName">Template-Name:</label>
+                                    <input type="text" id="templateName" placeholder="z.B. 4x10 oder Klimmzüge-Plan" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="templateSets">Sätze (kommagetrennt):</label>
+                                    <input type="text" id="templateSets" placeholder="z.B. 10,6,3,4 oder 10,10,10,10" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Template erstellen</button>
+                        </form>
+
+                        <!-- Template-Liste -->
+                        <details class="template-details">
+                            <summary id="templateSummary">Gespeicherte Templates anzeigen (0)</summary>
+                            <div id="templateList" class="template-list">
+                                <!-- Templates werden hier angezeigt -->
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- Übungen zu Plan zuordnen -->
+                    <div class="plan-form-container" style="margin-top: 30px;">
+                        <h3>Gewichte für Übungen speichern</h3>
                         <form id="planForm">
                             <div class="form-group">
                                 <label for="planExercise">Übung:</label>
@@ -161,21 +193,15 @@
                                 </select>
                             </div>
 
-                            <div class="weight-reference-inputs">
-                                <div class="form-group">
-                                    <label for="weight6Reps">Gewicht für 6 Wdh. (kg):</label>
-                                    <input type="number" id="weight6Reps" step="0.5" placeholder="z.B. 80" required>
-                                </div>
+                            <div class="form-group">
+                                <label for="planTemplate">Trainingsplan (optional):</label>
+                                <select id="planTemplate">
+                                    <option value="">Kein Plan (freies Training)</option>
+                                </select>
+                            </div>
 
-                                <div class="form-group">
-                                    <label for="weight10Reps">Gewicht für 10 Wdh. (kg):</label>
-                                    <input type="number" id="weight10Reps" step="0.5" placeholder="z.B. 70" required>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="weight3Reps">Gewicht für 3 Wdh. (kg):</label>
-                                    <input type="number" id="weight3Reps" step="0.5" placeholder="z.B. 90" required>
-                                </div>
+                            <div id="weightReferenceInputs" class="weight-reference-inputs">
+                                <!-- Wird dynamisch basierend auf gewähltem Template generiert -->
                             </div>
 
                             <button type="submit" class="btn-primary">Gewichte speichern</button>

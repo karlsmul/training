@@ -55,9 +55,13 @@ function migrateOldData() {
 
 // Trainingseinträge aus localStorage laden (mit Migration)
 let trainings = migrateOldData();
-let trainingPlans = (JSON.parse(localStorage.getItem('trainingPlans')) || []).filter(plan =>
-    plan.weight6Reps || plan.weight10Reps || plan.weight3Reps
-);
+
+// Plan-Templates (verschiedene Trainingspläne)
+let planTemplates = JSON.parse(localStorage.getItem('planTemplates')) || [];
+
+// Gewichts-Referenzen für Übungen (mit Template-Zuordnung)
+let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
+
 let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
 let personalInfo = JSON.parse(localStorage.getItem('personalInfo')) || { age: null, height: null, targetWeight: null };
@@ -226,8 +230,12 @@ const toggleBtns = document.querySelectorAll('.toggle-btn');
 const differentWeightsCheckbox = document.getElementById('differentWeights');
 
 // Plan elements
+const planTemplateForm = document.getElementById('planTemplateForm');
+const templateList = document.getElementById('templateList');
 const planForm = document.getElementById('planForm');
 const planList = document.getElementById('planList');
+const planTemplateSelect = document.getElementById('planTemplate');
+const weightReferenceInputs = document.getElementById('weightReferenceInputs');
 
 // Settings elements
 const bodyDataForm = document.getElementById('bodyDataForm');
@@ -1069,19 +1077,199 @@ function displayPersonalRecords() {
 }
 
 // ========================================
-// TRAININGSPLAN
+// PLAN-TEMPLATES VERWALTUNG
+// ========================================
+
+// Standard-Template beim ersten Start erstellen
+if (planTemplates.length === 0) {
+    planTemplates.push({
+        id: Date.now(),
+        name: '4x10x6x3',
+        sets: [10, 6, 3, 4]
+    });
+    localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
+}
+
+// Template hinzufügen
+planTemplateForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('templateName').value.trim();
+    const setsInput = document.getElementById('templateSets').value.trim();
+
+    if (!name || !setsInput) return;
+
+    // Parse Sätze
+    const sets = setsInput.split(',').map(s => parseInt(s.trim())).filter(s => s > 0);
+
+    if (sets.length === 0) {
+        showNotification('⚠️ Bitte gültige Sätze eingeben (z.B. 10,6,3,4)');
+        return;
+    }
+
+    // Prüfen ob Name bereits existiert
+    if (planTemplates.some(t => t.name === name)) {
+        showNotification('⚠️ Template-Name existiert bereits!');
+        return;
+    }
+
+    const template = {
+        id: Date.now(),
+        name: name,
+        sets: sets
+    };
+
+    planTemplates.push(template);
+    localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
+
+    // Sync zur Cloud
+    if (typeof syncPlanTemplatesToCloud === 'function') {
+        syncPlanTemplatesToCloud();
+    }
+
+    displayPlanTemplates();
+    populateTemplateDropdown();
+    planTemplateForm.reset();
+    showNotification('Template erstellt!');
+});
+
+// Templates anzeigen
+function displayPlanTemplates() {
+    const summaryEl = document.getElementById('templateSummary');
+    if (summaryEl) {
+        summaryEl.textContent = `Gespeicherte Templates anzeigen (${planTemplates.length})`;
+    }
+
+    if (planTemplates.length === 0) {
+        templateList.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Templates</p>';
+        return;
+    }
+
+    templateList.innerHTML = planTemplates.map(template => `
+        <div class="template-item">
+            <div>
+                <span class="template-name">${template.name}</span>
+                <span class="template-sets">${template.sets.join(' → ')} Wdh.</span>
+            </div>
+            <button class="delete-btn" onclick="deleteTemplate(${template.id})">Löschen</button>
+        </div>
+    `).join('');
+}
+
+// Template löschen
+function deleteTemplate(id) {
+    if (confirm('Template wirklich löschen?')) {
+        planTemplates = planTemplates.filter(t => t.id !== id);
+        localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
+
+        // Sync zur Cloud
+        if (typeof syncPlanTemplatesToCloud === 'function') {
+            syncPlanTemplatesToCloud();
+        }
+
+        displayPlanTemplates();
+        populateTemplateDropdown();
+        showNotification('Template gelöscht!');
+    }
+}
+
+// Template-Dropdown befüllen
+function populateTemplateDropdown() {
+    if (!planTemplateSelect) return;
+
+    const currentValue = planTemplateSelect.value;
+    planTemplateSelect.innerHTML = '<option value="">Kein Plan (freies Training)</option>';
+
+    planTemplates.forEach(template => {
+        const option = document.createElement('option');
+        option.value = template.id;
+        option.textContent = `${template.name} (${template.sets.join('→')} Wdh.)`;
+        planTemplateSelect.appendChild(option);
+    });
+
+    if (currentValue) {
+        planTemplateSelect.value = currentValue;
+    }
+}
+
+// Gewichts-Eingabefelder basierend auf Template generieren
+planTemplateSelect.addEventListener('change', function() {
+    const templateId = parseInt(this.value);
+
+    if (!templateId) {
+        // Kein Plan gewählt
+        weightReferenceInputs.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">Freies Training - keine Gewichts-Referenzen erforderlich</p>';
+        return;
+    }
+
+    const template = planTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    // Eingabefelder für jede Wiederholungszahl generieren
+    weightReferenceInputs.innerHTML = template.sets.map((reps, index) => `
+        <div class="form-group">
+            <label for="weight${reps}Reps">Gewicht für ${reps} Wdh. (kg):</label>
+            <input type="number" id="weight${reps}Reps" step="0.5" placeholder="z.B. ${80 - index * 5}" required>
+        </div>
+    `).join('');
+});
+
+// ========================================
+// TRAININGSPLAN (Gewichte für Übungen)
 // ========================================
 
 planForm.addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const exercise = document.getElementById('planExercise').value;
-    const weight6Reps = parseFloat(document.getElementById('weight6Reps').value) || null;
-    const weight10Reps = parseFloat(document.getElementById('weight10Reps').value) || null;
-    const weight3Reps = parseFloat(document.getElementById('weight3Reps').value) || null;
+    const templateId = parseInt(planTemplateSelect.value) || null;
 
-    // Validierung: mindestens ein Gewicht muss angegeben sein
-    if (!weight6Reps && !weight10Reps && !weight3Reps) {
+    // Kein Template = Freies Training (keine Gewichte erforderlich)
+    if (!templateId) {
+        const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
+
+        const plan = {
+            id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
+            exercise: exercise,
+            templateId: null,
+            weights: {}
+        };
+
+        if (existingPlanIndex !== -1) {
+            trainingPlans[existingPlanIndex] = plan;
+            showNotification('Übung auf freies Training gesetzt!');
+        } else {
+            trainingPlans.push(plan);
+            showNotification('Übung hinzugefügt (freies Training)!');
+        }
+
+        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+        if (typeof syncPlanToCloud === 'function') {
+            await syncPlanToCloud(plan);
+        }
+        displayTrainingPlans();
+        planForm.reset();
+        weightReferenceInputs.innerHTML = '';
+        return;
+    }
+
+    // Template gewählt - Gewichte sammeln
+    const template = planTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    const weights = {};
+    let hasAtLeastOneWeight = false;
+
+    // Gewichte für jede Wiederholungszahl sammeln
+    template.sets.forEach(reps => {
+        const input = document.getElementById(`weight${reps}Reps`);
+        if (input && input.value) {
+            weights[reps] = parseFloat(input.value);
+            hasAtLeastOneWeight = true;
+        }
+    });
+
+    if (!hasAtLeastOneWeight) {
         showNotification('⚠️ Bitte mindestens ein Gewicht eingeben!');
         return;
     }
@@ -1091,91 +1279,122 @@ planForm.addEventListener('submit', async function(e) {
     const plan = {
         id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
         exercise: exercise,
-        weight6Reps: weight6Reps,
-        weight10Reps: weight10Reps,
-        weight3Reps: weight3Reps
+        templateId: templateId,
+        templateName: template.name,
+        weights: weights
     };
 
     if (existingPlanIndex !== -1) {
-        // Aktualisiere existierenden Plan
         trainingPlans[existingPlanIndex] = plan;
         showNotification('Gewichte aktualisiert!');
     } else {
-        // Neuer Plan
         trainingPlans.push(plan);
         showNotification('Gewichte hinzugefügt!');
     }
 
     localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
-    // Zu Cloud synchronisieren
     if (typeof syncPlanToCloud === 'function') {
         await syncPlanToCloud(plan);
     }
 
     displayTrainingPlans();
     planForm.reset();
+    weightReferenceInputs.innerHTML = '';
 });
 
 function displayTrainingPlans() {
-    // Filtere ungültige Pläne (ohne jegliche Gewichte)
-    const validPlans = trainingPlans.filter(plan =>
-        plan.weight6Reps || plan.weight10Reps || plan.weight3Reps
-    );
-
-    if (validPlans.length === 0) {
+    if (trainingPlans.length === 0) {
         planList.innerHTML = `
             <div class="empty-state">
-                <p>Noch keine Gewichte gespeichert.</p>
-                <p>Füge deine erste Gewichts-Referenz hinzu! 📋</p>
+                <p>Noch keine Übungen gespeichert.</p>
+                <p>Füge deine erste Übung hinzu! 📋</p>
             </div>
         `;
         return;
     }
 
-    planList.innerHTML = validPlans.map(plan => `
-        <div class="plan-item">
-            <div class="plan-info">
-                <h3>${plan.exercise}</h3>
-                <div class="weight-reference-table">
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">6 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight6Reps ? plan.weight6Reps + ' kg' : '-'}</div>
+    planList.innerHTML = trainingPlans.map(plan => {
+        // Freies Training (kein Template)
+        if (!plan.templateId) {
+            return `
+                <div class="plan-item">
+                    <div class="plan-info">
+                        <h3>${plan.exercise}</h3>
+                        <div class="plan-type">Freies Training (ohne Plan)</div>
                     </div>
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">10 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight10Reps ? plan.weight10Reps + ' kg' : '-'}</div>
-                    </div>
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">3 Wiederholungen:</div>
-                        <div class="weight-ref-value">${plan.weight3Reps ? plan.weight3Reps + ' kg' : '-'}</div>
+                    <div class="plan-actions">
+                        <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
+                        <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
                     </div>
                 </div>
+            `;
+        }
+
+        // Mit Template
+        const template = planTemplates.find(t => t.id === plan.templateId);
+        const templateName = template ? template.name : plan.templateName || 'Unbekannt';
+
+        const weightsHtml = Object.entries(plan.weights || {})
+            .sort(([a], [b]) => parseInt(b) - parseInt(a)) // Sortiere nach Wiederholungen absteigend
+            .map(([reps, weight]) => `
+                <div class="weight-ref-row">
+                    <div class="weight-ref-label">${reps} Wiederholungen:</div>
+                    <div class="weight-ref-value">${weight} kg</div>
+                </div>
+            `).join('');
+
+        return `
+            <div class="plan-item">
+                <div class="plan-info">
+                    <h3>${plan.exercise}</h3>
+                    <div class="plan-type">Plan: ${templateName}</div>
+                    <div class="weight-reference-table">
+                        ${weightsHtml || '<p style="color: #999;">Keine Gewichte gespeichert</p>'}
+                    </div>
+                </div>
+                <div class="plan-actions">
+                    <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
+                    <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
+                </div>
             </div>
-            <div class="plan-actions">
-                <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
-                <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
-            </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function editPlan(id) {
     const plan = trainingPlans.find(p => p.id === id);
     if (!plan) return;
 
-    // Formular mit Daten füllen
+    // Übung auswählen
     document.getElementById('planExercise').value = plan.exercise;
-    document.getElementById('weight6Reps').value = plan.weight6Reps || '';
-    document.getElementById('weight10Reps').value = plan.weight10Reps || '';
-    document.getElementById('weight3Reps').value = plan.weight3Reps || '';
+
+    // Template auswählen
+    if (plan.templateId) {
+        planTemplateSelect.value = plan.templateId;
+        // Trigger change event um Eingabefelder zu generieren
+        planTemplateSelect.dispatchEvent(new Event('change'));
+
+        // Warte kurz, dann Gewichte eintragen
+        setTimeout(() => {
+            Object.entries(plan.weights || {}).forEach(([reps, weight]) => {
+                const input = document.getElementById(`weight${reps}Reps`);
+                if (input) {
+                    input.value = weight;
+                }
+            });
+        }, 100);
+    } else {
+        planTemplateSelect.value = '';
+        planTemplateSelect.dispatchEvent(new Event('change'));
+    }
 
     // Scroll zum Formular
     document.getElementById('planForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function deletePlan(id) {
-    if (confirm('Gewichte für diese Übung löschen?')) {
+    if (confirm('Diese Übung wirklich löschen?')) {
         trainingPlans = trainingPlans.filter(p => p.id !== id);
         localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
 
@@ -1185,12 +1404,14 @@ async function deletePlan(id) {
         }
 
         displayTrainingPlans();
-        showNotification('Gewichte gelöscht!');
+        showNotification('Übung gelöscht!');
     }
 }
 
-// Globale Funktion für onclick-Handler
+// Globale Funktionen für onclick-Handler
 window.editPlan = editPlan;
+window.deletePlan = deletePlan;
+window.deleteTemplate = deleteTemplate;
 
 // ========================================
 // EINSTELLUNGEN - KÖRPERGEWICHT
@@ -2592,7 +2813,12 @@ async function initApp() {
     populateExerciseDropdown();
     displayTrainings();
     displayPersonalRecords();
+
+    // Plan-Templates initialisieren
+    displayPlanTemplates();
+    populateTemplateDropdown();
     displayTrainingPlans();
+
     displayBodyWeightHistory();
     displayExerciseList();
     loadTargetWeight(); // Zielgewicht laden
