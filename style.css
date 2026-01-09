@@ -1275,6 +1275,12 @@ select:focus {
     padding: 15px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     border-left: 4px solid #667eea;
+    transition: all 0.2s ease;
+}
+
+.plan-entry-card.editing {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
 }
 
 .plan-entry-header {
@@ -1294,6 +1300,7 @@ select:focus {
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
+    margin-bottom: 12px;
 }
 
 .plan-detail {
@@ -1306,6 +1313,12 @@ select:focus {
 
 .plan-detail strong {
     color: #667eea;
+}
+
+.plan-entry-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 /* Delete Button Small */
@@ -1326,6 +1339,52 @@ select:focus {
 
 .delete-btn-small:hover {
     background: #ee5a5a;
+}
+
+/* Plan Entry Actions */
+.plan-entry-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.edit-btn-small {
+    background: #f0f3ff;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.edit-btn-small:hover {
+    background: #667eea;
+}
+
+/* Bearbeiten-Button im Formular */
+.btn-primary.editing {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-left: 10px;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
 }
 
 /* Trainingshistorie Header */

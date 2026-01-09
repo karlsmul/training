@@ -995,6 +995,7 @@ function displayPersonalRecords() {
 // Plan-Einträge: { id, exercise, weight, sets, reps }
 let planEntries = JSON.parse(localStorage.getItem('planEntries')) || [];
 let selectedPlanExercise = ''; // Aktuell ausgewählte Übung zur Anzeige
+let editingPlanEntryId = null; // ID des aktuell bearbeiteten Eintrags
 
 // Plan-Formular
 const planEntryForm = document.getElementById('planEntryForm');
@@ -1041,7 +1042,7 @@ if (planViewExerciseSelect) {
     });
 }
 
-// Plan-Eintrag speichern
+// Plan-Eintrag speichern (neu oder bearbeitet)
 if (planEntryForm) {
     planEntryForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -1056,30 +1057,108 @@ if (planEntryForm) {
             return;
         }
 
-        // Neuen Eintrag erstellen (mehrere Einträge pro Übung erlaubt)
-        const entry = {
-            id: Date.now(),
-            exercise,
-            weight,
-            sets,
-            reps
-        };
+        if (editingPlanEntryId) {
+            // Bestehenden Eintrag aktualisieren
+            const index = planEntries.findIndex(p => p.id === editingPlanEntryId);
+            if (index !== -1) {
+                planEntries[index] = {
+                    id: editingPlanEntryId,
+                    exercise,
+                    weight,
+                    sets,
+                    reps
+                };
+                localStorage.setItem('planEntries', JSON.stringify(planEntries));
 
-        planEntries.push(entry);
-        localStorage.setItem('planEntries', JSON.stringify(planEntries));
+                // Sync zur Cloud
+                if (typeof syncPlanEntryToCloud === 'function') {
+                    await syncPlanEntryToCloud(planEntries[index]);
+                }
 
-        // Sync zur Cloud
-        if (typeof syncPlanEntryToCloud === 'function') {
-            await syncPlanEntryToCloud(entry);
+                showNotification('Eintrag aktualisiert!');
+            }
+            editingPlanEntryId = null;
+            updatePlanFormButton();
+        } else {
+            // Neuen Eintrag erstellen (mehrere Einträge pro Übung erlaubt)
+            const entry = {
+                id: Date.now(),
+                exercise,
+                weight,
+                sets,
+                reps
+            };
+
+            planEntries.push(entry);
+            localStorage.setItem('planEntries', JSON.stringify(planEntries));
+
+            // Sync zur Cloud
+            if (typeof syncPlanEntryToCloud === 'function') {
+                await syncPlanEntryToCloud(entry);
+            }
+
+            showNotification('Eintrag gespeichert!');
         }
 
-        // Automatisch zur neu angelegten Übung wechseln
+        // Automatisch zur Übung wechseln
         selectedPlanExercise = exercise;
         populatePlanExerciseSelect();
         displayPlanEntries();
         planEntryForm.reset();
-        showNotification('Eintrag gespeichert!');
     });
+}
+
+// Plan-Eintrag bearbeiten
+function editPlanEntry(id) {
+    const entry = planEntries.find(p => p.id === id);
+    if (!entry) return;
+
+    // Formular mit Werten füllen
+    planExerciseSelect.value = entry.exercise;
+    document.getElementById('planWeight').value = entry.weight || '';
+    document.getElementById('planSets').value = entry.sets || '';
+    document.getElementById('planReps').value = entry.reps || '';
+
+    // Bearbeitungsmodus aktivieren
+    editingPlanEntryId = id;
+    updatePlanFormButton();
+
+    // Zum Formular scrollen
+    planEntryForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Bearbeitung abbrechen
+function cancelPlanEdit() {
+    editingPlanEntryId = null;
+    planEntryForm.reset();
+    updatePlanFormButton();
+}
+
+// Button-Text aktualisieren
+function updatePlanFormButton() {
+    const submitBtn = planEntryForm.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        if (editingPlanEntryId) {
+            submitBtn.textContent = 'Änderungen speichern';
+            submitBtn.classList.add('editing');
+            // Abbrechen-Button hinzufügen falls nicht vorhanden
+            if (!document.getElementById('cancelPlanEditBtn')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.id = 'cancelPlanEditBtn';
+                cancelBtn.className = 'btn-secondary';
+                cancelBtn.textContent = 'Abbrechen';
+                cancelBtn.onclick = cancelPlanEdit;
+                submitBtn.parentNode.insertBefore(cancelBtn, submitBtn.nextSibling);
+            }
+        } else {
+            submitBtn.textContent = 'Speichern';
+            submitBtn.classList.remove('editing');
+            // Abbrechen-Button entfernen
+            const cancelBtn = document.getElementById('cancelPlanEditBtn');
+            if (cancelBtn) cancelBtn.remove();
+        }
+    }
 }
 
 // Plan-Einträge anzeigen (gefiltert nach ausgewählter Übung)
@@ -1120,15 +1199,18 @@ function displayPlanEntries() {
     }
 
     planList.innerHTML = filteredEntries.map(entry => `
-        <div class="plan-entry-card">
+        <div class="plan-entry-card ${editingPlanEntryId === entry.id ? 'editing' : ''}">
             <div class="plan-entry-header">
                 <h4>${entry.exercise}</h4>
-                <button type="button" class="delete-btn-small" onclick="deletePlanEntry(${entry.id})">×</button>
             </div>
             <div class="plan-entry-details">
                 ${entry.weight ? `<span class="plan-detail"><strong>${entry.weight}</strong> kg</span>` : ''}
                 ${entry.sets ? `<span class="plan-detail"><strong>${entry.sets}</strong> Sätze</span>` : ''}
                 ${entry.reps ? `<span class="plan-detail"><strong>${entry.reps}</strong> Wdh.</span>` : ''}
+            </div>
+            <div class="plan-entry-buttons">
+                <button class="edit-btn" onclick="editPlanEntry(${entry.id})">Bearbeiten</button>
+                <button class="delete-btn" onclick="deletePlanEntry(${entry.id})">Löschen</button>
             </div>
         </div>
     `).join('');
@@ -1151,6 +1233,8 @@ async function deletePlanEntry(id) {
 
 // Globale Funktionen
 window.deletePlanEntry = deletePlanEntry;
+window.editPlanEntry = editPlanEntry;
+window.cancelPlanEdit = cancelPlanEdit;
 window.displayPlanEntries = displayPlanEntries;
 
 // Alias für Kompatibilität
