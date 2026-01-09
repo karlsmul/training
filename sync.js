@@ -34,14 +34,28 @@ async function initSync() {
 
   console.log('✅ Firebase-Referenzen erfolgreich geladen (db:', !!db, ', auth:', !!auth, ')');
 
+  // Letzten angemeldeten User speichern
+  let lastUserId = localStorage.getItem('lastUserId');
+
   // Auth State Observer
   auth.onAuthStateChanged(async (user) => {
     if (user) {
+      // Prüfen ob ein anderer User sich anmeldet
+      if (lastUserId && lastUserId !== user.uid) {
+        console.log('Anderer User angemeldet - lösche lokale Daten');
+        // Lokale Daten löschen bei Kontowechsel
+        clearLocalData();
+      }
+
+      // Aktuellen User speichern
+      localStorage.setItem('lastUserId', user.uid);
+      lastUserId = user.uid;
+
       currentUser = user;
       syncEnabled = true;
       console.log('Angemeldet als:', user.email || user.displayName);
 
-      // Initial-Sync
+      // Initial-Sync (lädt nur Cloud-Daten nach clearLocalData)
       await syncFromCloud();
 
       // Echtzeit-Listener für Änderungen
@@ -742,6 +756,52 @@ function startRealtimeSync() {
     }, (error) => {
       console.error('Personal Info Realtime-Sync Fehler:', error);
     });
+}
+
+// Lokale Daten löschen (bei Kontowechsel)
+function clearLocalData() {
+  console.log('Lösche lokale Daten für Kontowechsel...');
+
+  // Trainings löschen
+  if (typeof trainings !== 'undefined') {
+    trainings = [];
+  }
+  localStorage.removeItem('trainings');
+
+  // Trainingspläne löschen
+  if (typeof trainingPlans !== 'undefined') {
+    trainingPlans = [];
+  }
+  localStorage.removeItem('trainingPlans');
+
+  // Plan-Einträge löschen
+  if (typeof planEntries !== 'undefined') {
+    planEntries = [];
+  }
+  localStorage.removeItem('planEntries');
+
+  // Körpergewichte löschen
+  if (typeof bodyWeights !== 'undefined') {
+    bodyWeights = [];
+  }
+  localStorage.removeItem('bodyWeights');
+
+  // Borg-Werte löschen
+  if (typeof dailyBorgValues !== 'undefined') {
+    dailyBorgValues = [];
+  }
+  localStorage.removeItem('dailyBorgValues');
+
+  // Persönliche Infos löschen
+  localStorage.removeItem('personalInfo');
+
+  // UI aktualisieren
+  if (typeof displayTrainings === 'function') displayTrainings();
+  if (typeof displayPersonalRecords === 'function') displayPersonalRecords();
+  if (typeof displayTrainingPlans === 'function') displayTrainingPlans();
+  if (typeof displayBodyWeightHistory === 'function') displayBodyWeightHistory();
+
+  console.log('Lokale Daten gelöscht');
 }
 
 // Trainings mergen (Cloud hat Priorität bei Konflikten)
