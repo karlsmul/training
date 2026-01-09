@@ -1470,6 +1470,109 @@ select:focus {
     opacity: 0.9;
 }
 
+/* Vorlagen-Bereich */
+.templates-section {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f3ff 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #e0e5f0;
+}
+
+.templates-section h3 {
+    margin: 0 0 5px 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.templates-subtitle {
+    margin: 0 0 15px 0;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.template-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px 10px;
+    background: white;
+    border: 2px solid #e0e5f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.template-btn:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.template-icon {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.template-name {
+    font-weight: 600;
+    color: #333;
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+}
+
+.template-desc {
+    font-size: 0.7rem;
+    color: #888;
+    line-height: 1.2;
+}
+
+/* Gewichts-Schema Vorlagen */
+.weight-schema-templates {
+    background: #f8f9ff;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.weight-schema-templates label {
+    display: block;
+    font-size: 0.85rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.schema-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.schema-btn {
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.schema-btn:hover {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
 /* Workout Übersicht */
 .workout-overview {
     display: flex;

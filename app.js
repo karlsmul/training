@@ -1052,14 +1052,17 @@ function populateWorkoutSelect() {
 function openWorkoutEditor(workoutId = null) {
     if (!workoutEditor || !workoutOverview) return;
 
+    const copyWorkoutBtn = document.getElementById('copyWorkoutBtn');
+
     if (workoutId && workoutId !== '__new__') {
         // Bestehendes Workout bearbeiten
         const workout = workouts.find(w => w.id == workoutId);
         if (workout) {
             currentWorkout = workout;
-            currentWorkoutExercises = [...workout.exercises];
+            currentWorkoutExercises = JSON.parse(JSON.stringify(workout.exercises)); // Deep copy
             workoutName.value = workout.name;
             deleteWorkoutBtn.style.display = 'block';
+            if (copyWorkoutBtn) copyWorkoutBtn.style.display = 'block';
         }
     } else {
         // Neues Workout erstellen
@@ -1067,6 +1070,7 @@ function openWorkoutEditor(workoutId = null) {
         currentWorkoutExercises = [];
         workoutName.value = '';
         deleteWorkoutBtn.style.display = 'none';
+        if (copyWorkoutBtn) copyWorkoutBtn.style.display = 'none';
     }
 
     workoutEditor.style.display = 'block';
@@ -1379,6 +1383,146 @@ if (cancelWorkoutBtn) {
     cancelWorkoutBtn.addEventListener('click', closeWorkoutEditor);
 }
 
+// Training kopieren Button
+const copyWorkoutBtnEl = document.getElementById('copyWorkoutBtn');
+if (copyWorkoutBtnEl) {
+    copyWorkoutBtnEl.addEventListener('click', copyWorkout);
+}
+
+// ========================================
+// VORLAGEN-SYSTEM
+// ========================================
+
+// Vordefinierte Trainings-Vorlagen
+const WORKOUT_TEMPLATES = {
+    'big3_10_6_3': {
+        name: 'Big 3 (10er/6er/3er)',
+        exercises: [
+            { exercise: 'Kniebeugen', weights: [{reps: 10, weight: null}, {reps: 6, weight: null}, {reps: 3, weight: null}], bodyweight: false },
+            { exercise: 'Bankdrücken', weights: [{reps: 10, weight: null}, {reps: 6, weight: null}, {reps: 3, weight: null}], bodyweight: false },
+            { exercise: 'Kreuzheben', weights: [{reps: 10, weight: null}, {reps: 6, weight: null}, {reps: 3, weight: null}], bodyweight: false }
+        ]
+    },
+    'push': {
+        name: 'Push Tag',
+        exercises: [
+            { exercise: 'Bankdrücken', weights: [], bodyweight: false },
+            { exercise: 'Schulterdrücken', weights: [], bodyweight: false },
+            { exercise: 'Trizeps', weights: [], bodyweight: false }
+        ]
+    },
+    'pull': {
+        name: 'Pull Tag',
+        exercises: [
+            { exercise: 'Klimmzüge', weights: [], bodyweight: true },
+            { exercise: 'Rudern', weights: [], bodyweight: false },
+            { exercise: 'Bizeps Curls', weights: [], bodyweight: false }
+        ]
+    },
+    'legs': {
+        name: 'Bein Tag',
+        exercises: [
+            { exercise: 'Kniebeugen', weights: [], bodyweight: false },
+            { exercise: 'Kreuzheben', weights: [], bodyweight: false },
+            { exercise: 'Ausfallschritte', weights: [], bodyweight: false }
+        ]
+    }
+};
+
+// Gewichts-Schema Vorlagen
+const WEIGHT_SCHEMAS = {
+    '10_6_3': [{reps: 10, weight: null}, {reps: 6, weight: null}, {reps: 3, weight: null}],
+    '5x5': [{reps: 5, weight: null}, {reps: 5, weight: null}, {reps: 5, weight: null}, {reps: 5, weight: null}, {reps: 5, weight: null}],
+    '8_8_8': [{reps: 8, weight: null}, {reps: 8, weight: null}, {reps: 8, weight: null}],
+    '12_10_8': [{reps: 12, weight: null}, {reps: 10, weight: null}, {reps: 8, weight: null}]
+};
+
+// Training aus Vorlage erstellen
+function createFromTemplate(templateId) {
+    const template = WORKOUT_TEMPLATES[templateId];
+    if (!template) {
+        showNotification('Vorlage nicht gefunden!');
+        return;
+    }
+
+    // Deep copy der Vorlage
+    currentWorkout = null;
+    currentWorkoutExercises = JSON.parse(JSON.stringify(template.exercises));
+
+    if (workoutName) {
+        workoutName.value = template.name + ' (Kopie)';
+    }
+
+    const copyBtn = document.getElementById('copyWorkoutBtn');
+    if (deleteWorkoutBtn) deleteWorkoutBtn.style.display = 'none';
+    if (copyBtn) copyBtn.style.display = 'none';
+
+    if (workoutEditor) workoutEditor.style.display = 'block';
+    if (workoutOverview) workoutOverview.style.display = 'none';
+
+    renderWorkoutExercises();
+    showNotification(`Vorlage "${template.name}" geladen`);
+}
+
+// Gewichts-Schema auf alle Übungen anwenden
+function applyWeightSchema(schemaId) {
+    const schema = WEIGHT_SCHEMAS[schemaId];
+    if (!schema) {
+        showNotification('Schema nicht gefunden!');
+        return;
+    }
+
+    if (currentWorkoutExercises.length === 0) {
+        showNotification('Füge zuerst Übungen hinzu!');
+        return;
+    }
+
+    // Schema auf alle Übungen anwenden (ohne bestehende Gewichtswerte zu überschreiben)
+    currentWorkoutExercises.forEach(ex => {
+        if (!ex.bodyweight) {
+            // Deep copy des Schemas
+            ex.weights = JSON.parse(JSON.stringify(schema));
+        }
+    });
+
+    renderWorkoutExercises();
+    showNotification(`Schema angewendet: ${schemaId.replace('_', '/')}`);
+}
+
+// Bestehendes Training als Kopie speichern
+async function copyWorkout() {
+    const name = workoutName ? workoutName.value.trim() : '';
+
+    if (!name) {
+        showNotification('Bitte einen Namen eingeben!');
+        return;
+    }
+
+    if (currentWorkoutExercises.length === 0) {
+        showNotification('Bitte mindestens eine Übung hinzufügen!');
+        return;
+    }
+
+    // Neues Workout mit neuer ID erstellen
+    const newWorkout = {
+        id: Date.now(),
+        name: name.includes('(Kopie)') ? name : name + ' (Kopie)',
+        exercises: JSON.parse(JSON.stringify(currentWorkoutExercises))
+    };
+
+    workouts.push(newWorkout);
+    localStorage.setItem('workouts', JSON.stringify(workouts));
+
+    // Sync zur Cloud
+    if (typeof syncWorkoutToCloud === 'function') {
+        await syncWorkoutToCloud(newWorkout);
+    }
+
+    closeWorkoutEditor();
+    populateWorkoutSelect();
+    showNotification('Training als Kopie gespeichert!');
+}
+
 // Globale Funktionen
 window.removeWorkoutExercise = removeWorkoutExercise;
 window.addWeightEntry = addWeightEntry;
@@ -1387,6 +1531,9 @@ window.updateWeightEntry = updateWeightEntry;
 window.toggleBodyweight = toggleBodyweight;
 window.editWorkout = editWorkout;
 window.displayWorkouts = displayWorkouts;
+window.createFromTemplate = createFromTemplate;
+window.applyWeightSchema = applyWeightSchema;
+window.copyWorkout = copyWorkout;
 
 // Alias für Kompatibilität
 function displayTrainingPlans() {

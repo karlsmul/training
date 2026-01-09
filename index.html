@@ -160,6 +160,34 @@
                         </select>
                     </div>
 
+                    <!-- Vorlagen-Bereich -->
+                    <div class="templates-section">
+                        <h3>Vorlagen</h3>
+                        <p class="templates-subtitle">Nutze Vorlagen als Ausgangspunkt für neue Trainings</p>
+                        <div class="templates-grid">
+                            <button type="button" class="template-btn" onclick="createFromTemplate('big3_10_6_3')">
+                                <span class="template-icon">🏋️</span>
+                                <span class="template-name">Big 3 (10er/6er/3er)</span>
+                                <span class="template-desc">Kreuzheben, Kniebeugen, Bankdrücken</span>
+                            </button>
+                            <button type="button" class="template-btn" onclick="createFromTemplate('push')">
+                                <span class="template-icon">💪</span>
+                                <span class="template-name">Push Tag</span>
+                                <span class="template-desc">Bankdrücken, Schulterdrücken, Trizeps</span>
+                            </button>
+                            <button type="button" class="template-btn" onclick="createFromTemplate('pull')">
+                                <span class="template-icon">🔙</span>
+                                <span class="template-name">Pull Tag</span>
+                                <span class="template-desc">Klimmzüge, Rudern, Bizeps</span>
+                            </button>
+                            <button type="button" class="template-btn" onclick="createFromTemplate('legs')">
+                                <span class="template-icon">🦵</span>
+                                <span class="template-name">Bein Tag</span>
+                                <span class="template-desc">Kniebeugen, Kreuzheben, Ausfallschritte</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Trainingseinheit bearbeiten/erstellen -->
                     <div id="workoutEditor" class="workout-editor" style="display: none;">
                         <div class="workout-name-input">
@@ -172,6 +200,17 @@
                             <h3>Übungen</h3>
                             <div id="workoutExerciseList" class="workout-exercise-list">
                                 <!-- Dynamisch gefüllt -->
+                            </div>
+
+                            <!-- Gewichts-Schema Vorlagen -->
+                            <div class="weight-schema-templates">
+                                <label>Schema-Vorlage auf Übung anwenden:</label>
+                                <div class="schema-btns">
+                                    <button type="button" class="schema-btn" onclick="applyWeightSchema('10_6_3')">10er/6er/3er</button>
+                                    <button type="button" class="schema-btn" onclick="applyWeightSchema('5x5')">5×5</button>
+                                    <button type="button" class="schema-btn" onclick="applyWeightSchema('8_8_8')">3×8</button>
+                                    <button type="button" class="schema-btn" onclick="applyWeightSchema('12_10_8')">12/10/8</button>
+                                </div>
                             </div>
 
                             <!-- Neue Übung hinzufügen -->
@@ -189,6 +228,7 @@
                         <!-- Aktionen -->
                         <div class="workout-actions">
                             <button type="button" id="saveWorkoutBtn" class="btn-primary">Training speichern</button>
+                            <button type="button" id="copyWorkoutBtn" class="btn-secondary" style="display: none;">Als Kopie speichern</button>
                             <button type="button" id="deleteWorkoutBtn" class="btn-danger" style="display: none;">Training löschen</button>
                             <button type="button" id="cancelWorkoutBtn" class="btn-secondary">Abbrechen</button>
                         </div>
@@ -379,14 +419,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=25"></script>
-    <script src="sync.js?v=25"></script>
+    <script src="firebase-config.js?v=27"></script>
+    <script src="sync.js?v=27"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=25"></script>
+    <script src="plan-analysis.js?v=27"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=25"></script>
+    <script src="app.js?v=27"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -398,7 +438,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v26') {
+                        if (cacheName !== 'krafttraining-v27') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -408,7 +448,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=25')
+                navigator.serviceWorker.register('/service-worker.js?v=27')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 
