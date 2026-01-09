@@ -136,8 +136,8 @@
                     </div>
 
                     <div class="filter-section">
-                        <input type="text" id="searchExercise" placeholder="Übung suchen...">
-                        <select id="historyDateSelect">
+                        <select id="historyExerciseFilter">
+                            <option value="">-- Übung wählen --</option>
                             <!-- Wird dynamisch gefüllt -->
                         </select>
                     </div>
@@ -169,8 +169,8 @@
                                     <input type="number" id="weightNoteReps" min="1" max="50" placeholder="z.B. 10" required>
                                 </div>
                                 <div class="form-group" style="flex: 1;">
-                                    <label for="weightNoteWeight">Gewicht (kg):</label>
-                                    <input type="number" id="weightNoteWeight" min="0" step="0.5" placeholder="z.B. 100" required>
+                                    <label for="weightNoteWeight">Gewicht (kg, optional):</label>
+                                    <input type="number" id="weightNoteWeight" min="0" step="0.5" placeholder="optional">
                                 </div>
                             </div>
 
@@ -178,7 +178,15 @@
                         </form>
                     </div>
 
-                    <!-- Gewichts-Übersicht nach Übung -->
+                    <!-- Filter für Übungs-Anzeige -->
+                    <div class="weight-notes-filter">
+                        <label for="weightNotesFilterExercise">Übung anzeigen:</label>
+                        <select id="weightNotesFilterExercise">
+                            <option value="">-- Übung wählen --</option>
+                        </select>
+                    </div>
+
+                    <!-- Gewichts-Übersicht (nur wenn Übung ausgewählt) -->
                     <div id="weightNotesList" class="weight-notes-list">
                         <!-- Gewichts-Notizen werden hier angezeigt -->
                     </div>

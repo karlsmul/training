@@ -1264,6 +1264,75 @@ select:focus {
     background: #ee5a5a;
 }
 
+/* Filter-Dropdown Styling */
+.weight-notes-filter {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.weight-notes-filter label {
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+}
+
+.weight-notes-filter select {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+/* Trainingshistorie Header */
+.exercise-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.exercise-history-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.training-count {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.9rem;
+}
+
+/* Vereinfachter Date-Header */
+.date-header-simple {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.date-header-simple .date-icon {
+    font-size: 1rem;
+}
+
+.date-header-simple .date-title {
+    font-weight: 500;
+    color: #333;
+}
+
 .weight-reference-inputs {
     display: grid;
     gap: 15px;
