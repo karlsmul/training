@@ -56,9 +56,13 @@ function migrateOldData() {
 // Trainingseinträge aus localStorage laden (mit Migration)
 let trainings = migrateOldData();
 
-// Trainingsplan: Übung -> Gewichte für 10er, 6er, 3er
-// Format: { id, exercise, weight10, weight6, weight3 }
-let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
+// Trainingseinheiten (Workouts): Sammlung von Übungen mit Gewichten
+// Format: { id, name, exercises: [{ exercise, weight10, weight6, weight3, bodyweight }] }
+let workouts = JSON.parse(localStorage.getItem('workouts')) || [];
+
+// Aktuell bearbeitete Trainingseinheit (temporär)
+let currentWorkout = null;
+let currentWorkoutExercises = [];
 
 let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
@@ -86,7 +90,7 @@ let currentTrainingType = 'weight';
 const AppState = {
     // Daten-Referenzen (für schrittweise Migration)
     get trainings() { return trainings; },
-    get trainingPlans() { return trainingPlans; },
+    get workouts() { return workouts; },
     get bodyWeights() { return bodyWeights; },
     get dailyBorgValues() { return dailyBorgValues; },
     get personalInfo() { return personalInfo; },
@@ -232,10 +236,17 @@ const timeGroup = document.getElementById('timeGroup');
 const toggleBtns = document.querySelectorAll('.toggle-btn');
 const differentWeightsCheckbox = document.getElementById('differentWeights');
 
-// Trainingsplan elements
-const trainingPlanForm = document.getElementById('trainingPlanForm');
-const trainingPlanList = document.getElementById('trainingPlanList');
-const planExerciseSelect = document.getElementById('planExercise');
+// Trainingseinheiten elements
+const workoutSelect = document.getElementById('workoutSelect');
+const workoutEditor = document.getElementById('workoutEditor');
+const workoutName = document.getElementById('workoutName');
+const workoutExerciseList = document.getElementById('workoutExerciseList');
+const addExerciseSelect = document.getElementById('addExerciseSelect');
+const addExerciseBtn = document.getElementById('addExerciseBtn');
+const saveWorkoutBtn = document.getElementById('saveWorkoutBtn');
+const deleteWorkoutBtn = document.getElementById('deleteWorkoutBtn');
+const cancelWorkoutBtn = document.getElementById('cancelWorkoutBtn');
+const workoutOverview = document.getElementById('workoutOverview');
 
 // Trainingshistorie Filter
 const searchInput = document.getElementById('searchExercise');
@@ -389,20 +400,20 @@ function populateExerciseDropdown() {
         exerciseSelect.value = currentValue;
     }
 
-    // Trainingsplan-Dropdown füllen
-    if (planExerciseSelect) {
-        const currentValue = planExerciseSelect.value;
-        planExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
+    // Übung-hinzufügen-Dropdown im Workout-Editor füllen
+    if (addExerciseSelect) {
+        const currentValue = addExerciseSelect.value;
+        addExerciseSelect.innerHTML = '<option value="">-- Übung wählen --</option>';
 
         exercises.forEach(exercise => {
             const option = document.createElement('option');
             option.value = exercise;
             option.textContent = exercise;
-            planExerciseSelect.appendChild(option);
+            addExerciseSelect.appendChild(option);
         });
 
         if (currentValue && exercises.includes(currentValue)) {
-            planExerciseSelect.value = currentValue;
+            addExerciseSelect.value = currentValue;
         }
     }
 
@@ -1012,148 +1023,344 @@ function displayPersonalRecords() {
 }
 
 // ========================================
-// GEWICHTS-MERKHILFE
+// TRAININGSEINHEITEN (WORKOUTS)
 // ========================================
 
-// Gewichts-Notiz hinzufügen
-// ========================================
-// TRAININGSPLAN (10er, 6er, 3er Gewichte)
-// ========================================
+// Workout-Dropdown befüllen
+function populateWorkoutSelect() {
+    if (!workoutSelect) return;
 
-if (trainingPlanForm) {
-    trainingPlanForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
+    const currentValue = workoutSelect.value;
+    workoutSelect.innerHTML = `
+        <option value="">-- Training auswählen oder neu erstellen --</option>
+        <option value="__new__">+ Neues Training erstellen</option>
+    `;
 
-        const exercise = planExerciseSelect.value;
-        const weight10 = parseFloat(document.getElementById('planWeight10').value) || null;
-        const weight6 = parseFloat(document.getElementById('planWeight6').value) || null;
-        const weight3 = parseFloat(document.getElementById('planWeight3').value) || null;
-
-        if (!exercise) {
-            showNotification('Bitte eine Übung auswählen!');
-            return;
-        }
-
-        if (!weight10 && !weight6 && !weight3) {
-            showNotification('Bitte mindestens ein Gewicht eintragen!');
-            return;
-        }
-
-        // Prüfen ob Plan für diese Übung bereits existiert
-        const existingIndex = trainingPlans.findIndex(p => p.exercise === exercise);
-
-        const plan = {
-            id: existingIndex !== -1 ? trainingPlans[existingIndex].id : Date.now(),
-            exercise: exercise,
-            weight10: weight10,
-            weight6: weight6,
-            weight3: weight3
-        };
-
-        if (existingIndex !== -1) {
-            trainingPlans[existingIndex] = plan;
-            showNotification('Plan aktualisiert!');
-        } else {
-            trainingPlans.push(plan);
-            showNotification('Plan gespeichert!');
-        }
-
-        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
-
-        // Sync zur Cloud
-        if (typeof syncTrainingPlanToCloud === 'function') {
-            await syncTrainingPlanToCloud(plan);
-        }
-
-        displayTrainingPlans();
-        trainingPlanForm.reset();
+    workouts.forEach(workout => {
+        const option = document.createElement('option');
+        option.value = workout.id;
+        option.textContent = workout.name;
+        workoutSelect.appendChild(option);
     });
 
-    // Wenn Übung ausgewählt wird, lade bestehende Werte
-    if (planExerciseSelect) {
-        planExerciseSelect.addEventListener('change', function() {
-            const exercise = this.value;
-            const existingPlan = trainingPlans.find(p => p.exercise === exercise);
-
-            if (existingPlan) {
-                document.getElementById('planWeight10').value = existingPlan.weight10 || '';
-                document.getElementById('planWeight6').value = existingPlan.weight6 || '';
-                document.getElementById('planWeight3').value = existingPlan.weight3 || '';
-            } else {
-                document.getElementById('planWeight10').value = '';
-                document.getElementById('planWeight6').value = '';
-                document.getElementById('planWeight3').value = '';
-            }
-        });
+    if (currentValue && currentValue !== '__new__') {
+        workoutSelect.value = currentValue;
     }
 }
 
-// Trainingsplan anzeigen
-function displayTrainingPlans() {
-    if (!trainingPlanList) return;
+// Workout-Editor öffnen
+function openWorkoutEditor(workoutId = null) {
+    if (!workoutEditor || !workoutOverview) return;
 
-    if (trainingPlans.length === 0) {
-        trainingPlanList.innerHTML = `
+    if (workoutId && workoutId !== '__new__') {
+        // Bestehendes Workout bearbeiten
+        const workout = workouts.find(w => w.id == workoutId);
+        if (workout) {
+            currentWorkout = workout;
+            currentWorkoutExercises = [...workout.exercises];
+            workoutName.value = workout.name;
+            deleteWorkoutBtn.style.display = 'block';
+        }
+    } else {
+        // Neues Workout erstellen
+        currentWorkout = null;
+        currentWorkoutExercises = [];
+        workoutName.value = '';
+        deleteWorkoutBtn.style.display = 'none';
+    }
+
+    workoutEditor.style.display = 'block';
+    workoutOverview.style.display = 'none';
+    renderWorkoutExercises();
+}
+
+// Workout-Editor schließen
+function closeWorkoutEditor() {
+    if (!workoutEditor || !workoutOverview) return;
+
+    workoutEditor.style.display = 'none';
+    workoutOverview.style.display = 'block';
+    currentWorkout = null;
+    currentWorkoutExercises = [];
+    workoutSelect.value = '';
+    displayWorkouts();
+}
+
+// Übungen im Editor rendern
+function renderWorkoutExercises() {
+    if (!workoutExerciseList) return;
+
+    if (currentWorkoutExercises.length === 0) {
+        workoutExerciseList.innerHTML = `
             <div class="empty-state">
-                <p>Noch kein Trainingsplan vorhanden.</p>
-                <p>Wähle eine Übung und trage deine Zielgewichte ein!</p>
+                <p>Noch keine Übungen hinzugefügt.</p>
+                <p>Wähle unten eine Übung aus.</p>
             </div>
         `;
         return;
     }
 
-    // Sortiere alphabetisch nach Übung
-    const sortedPlans = [...trainingPlans].sort((a, b) => a.exercise.localeCompare(b.exercise));
-
-    trainingPlanList.innerHTML = sortedPlans.map(plan => {
-        const w10 = plan.weight10 ? `${plan.weight10} kg` : '--';
-        const w6 = plan.weight6 ? `${plan.weight6} kg` : '--';
-        const w3 = plan.weight3 ? `${plan.weight3} kg` : '--';
+    workoutExerciseList.innerHTML = currentWorkoutExercises.map((ex, index) => {
+        const w10Display = ex.bodyweight ? 'KG' : (ex.weight10 ? ex.weight10 : '--');
+        const w6Display = ex.bodyweight ? 'KG' : (ex.weight6 ? ex.weight6 : '--');
+        const w3Display = ex.bodyweight ? 'KG' : (ex.weight3 ? ex.weight3 : '--');
 
         return `
-            <div class="plan-card">
-                <div class="plan-card-header">
-                    <h3>${plan.exercise}</h3>
-                    <button class="delete-btn-small" onclick="deleteTrainingPlan(${plan.id})">×</button>
+            <div class="workout-exercise-card" data-index="${index}">
+                <div class="workout-exercise-header">
+                    <h4>${ex.exercise}</h4>
+                    <button type="button" class="delete-btn-small" onclick="removeWorkoutExercise(${index})">×</button>
                 </div>
-                <div class="plan-weights">
-                    <div class="plan-weight-cell">
-                        <span class="plan-label">10er</span>
-                        <span class="plan-value">${w10}</span>
+                <div class="workout-exercise-weights">
+                    <div class="weight-input-group">
+                        <label>10er</label>
+                        <input type="number"
+                               value="${ex.weight10 || ''}"
+                               placeholder="--"
+                               step="0.5"
+                               ${ex.bodyweight ? 'disabled' : ''}
+                               onchange="updateWorkoutExercise(${index}, 'weight10', this.value)">
                     </div>
-                    <div class="plan-weight-cell">
-                        <span class="plan-label">6er</span>
-                        <span class="plan-value">${w6}</span>
+                    <div class="weight-input-group">
+                        <label>6er</label>
+                        <input type="number"
+                               value="${ex.weight6 || ''}"
+                               placeholder="--"
+                               step="0.5"
+                               ${ex.bodyweight ? 'disabled' : ''}
+                               onchange="updateWorkoutExercise(${index}, 'weight6', this.value)">
                     </div>
-                    <div class="plan-weight-cell">
-                        <span class="plan-label">3er</span>
-                        <span class="plan-value">${w3}</span>
+                    <div class="weight-input-group">
+                        <label>3er</label>
+                        <input type="number"
+                               value="${ex.weight3 || ''}"
+                               placeholder="--"
+                               step="0.5"
+                               ${ex.bodyweight ? 'disabled' : ''}
+                               onchange="updateWorkoutExercise(${index}, 'weight3', this.value)">
                     </div>
+                </div>
+                <div class="bodyweight-toggle">
+                    <label>
+                        <input type="checkbox"
+                               ${ex.bodyweight ? 'checked' : ''}
+                               onchange="toggleBodyweight(${index}, this.checked)">
+                        Körpergewicht
+                    </label>
                 </div>
             </div>
         `;
     }).join('');
 }
 
-// Trainingsplan löschen
-async function deleteTrainingPlan(id) {
-    if (confirm('Diesen Plan wirklich löschen?')) {
-        trainingPlans = trainingPlans.filter(p => p.id !== id);
-        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+// Übung zum Workout hinzufügen
+function addExerciseToWorkout() {
+    if (!addExerciseSelect) return;
 
-        // Aus Cloud löschen
-        if (typeof deleteTrainingPlanFromCloud === 'function') {
-            await deleteTrainingPlanFromCloud(id);
-        }
+    const exercise = addExerciseSelect.value;
+    if (!exercise) {
+        showNotification('Bitte eine Übung auswählen!');
+        return;
+    }
 
-        displayTrainingPlans();
-        showNotification('Plan gelöscht!');
+    // Prüfen ob Übung bereits im Workout
+    if (currentWorkoutExercises.find(e => e.exercise === exercise)) {
+        showNotification('Diese Übung ist bereits im Training!');
+        return;
+    }
+
+    currentWorkoutExercises.push({
+        exercise: exercise,
+        weight10: null,
+        weight6: null,
+        weight3: null,
+        bodyweight: false
+    });
+
+    addExerciseSelect.value = '';
+    renderWorkoutExercises();
+}
+
+// Übung aus Workout entfernen
+function removeWorkoutExercise(index) {
+    currentWorkoutExercises.splice(index, 1);
+    renderWorkoutExercises();
+}
+
+// Übung im Workout aktualisieren
+function updateWorkoutExercise(index, field, value) {
+    if (currentWorkoutExercises[index]) {
+        currentWorkoutExercises[index][field] = value ? parseFloat(value) : null;
     }
 }
 
+// Körpergewicht-Toggle
+function toggleBodyweight(index, checked) {
+    if (currentWorkoutExercises[index]) {
+        currentWorkoutExercises[index].bodyweight = checked;
+        if (checked) {
+            currentWorkoutExercises[index].weight10 = null;
+            currentWorkoutExercises[index].weight6 = null;
+            currentWorkoutExercises[index].weight3 = null;
+        }
+        renderWorkoutExercises();
+    }
+}
+
+// Workout speichern
+async function saveWorkout() {
+    const name = workoutName.value.trim();
+
+    if (!name) {
+        showNotification('Bitte einen Namen für das Training eingeben!');
+        return;
+    }
+
+    if (currentWorkoutExercises.length === 0) {
+        showNotification('Bitte mindestens eine Übung hinzufügen!');
+        return;
+    }
+
+    const workout = {
+        id: currentWorkout ? currentWorkout.id : Date.now(),
+        name: name,
+        exercises: currentWorkoutExercises
+    };
+
+    if (currentWorkout) {
+        // Bestehendes Workout aktualisieren
+        const index = workouts.findIndex(w => w.id === currentWorkout.id);
+        if (index !== -1) {
+            workouts[index] = workout;
+        }
+        showNotification('Training aktualisiert!');
+    } else {
+        // Neues Workout hinzufügen
+        workouts.push(workout);
+        showNotification('Training gespeichert!');
+    }
+
+    localStorage.setItem('workouts', JSON.stringify(workouts));
+
+    // Sync zur Cloud
+    if (typeof syncWorkoutToCloud === 'function') {
+        await syncWorkoutToCloud(workout);
+    }
+
+    closeWorkoutEditor();
+    populateWorkoutSelect();
+}
+
+// Workout löschen
+async function deleteWorkout() {
+    if (!currentWorkout) return;
+
+    if (confirm(`Training "${currentWorkout.name}" wirklich löschen?`)) {
+        workouts = workouts.filter(w => w.id !== currentWorkout.id);
+        localStorage.setItem('workouts', JSON.stringify(workouts));
+
+        // Aus Cloud löschen
+        if (typeof deleteWorkoutFromCloud === 'function') {
+            await deleteWorkoutFromCloud(currentWorkout.id);
+        }
+
+        closeWorkoutEditor();
+        populateWorkoutSelect();
+        showNotification('Training gelöscht!');
+    }
+}
+
+// Workouts in der Übersicht anzeigen
+function displayWorkouts() {
+    if (!workoutOverview) return;
+
+    if (workouts.length === 0) {
+        workoutOverview.innerHTML = `
+            <div class="empty-state">
+                <p>Noch keine Trainingseinheiten vorhanden.</p>
+                <p>Erstelle dein erstes Training!</p>
+            </div>
+        `;
+        return;
+    }
+
+    workoutOverview.innerHTML = workouts.map(workout => {
+        const exerciseCount = workout.exercises.length;
+        const exerciseNames = workout.exercises.map(e => e.exercise).join(', ');
+
+        return `
+            <div class="workout-card" onclick="editWorkout(${workout.id})">
+                <div class="workout-card-header">
+                    <h3>${workout.name}</h3>
+                    <span class="exercise-count">${exerciseCount} Übung${exerciseCount !== 1 ? 'en' : ''}</span>
+                </div>
+                <div class="workout-card-exercises">
+                    ${workout.exercises.map(ex => {
+                        const weights = [];
+                        if (ex.bodyweight) {
+                            weights.push('KG');
+                        } else {
+                            if (ex.weight10) weights.push(`10er: ${ex.weight10}kg`);
+                            if (ex.weight6) weights.push(`6er: ${ex.weight6}kg`);
+                            if (ex.weight3) weights.push(`3er: ${ex.weight3}kg`);
+                        }
+                        return `
+                            <div class="workout-exercise-preview">
+                                <span class="exercise-name">${ex.exercise}</span>
+                                <span class="exercise-weights">${weights.join(' | ') || '--'}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Workout zum Bearbeiten öffnen
+function editWorkout(workoutId) {
+    workoutSelect.value = workoutId;
+    openWorkoutEditor(workoutId);
+}
+
+// Event Listeners für Workout-System
+if (workoutSelect) {
+    workoutSelect.addEventListener('change', function() {
+        const value = this.value;
+        if (value === '__new__' || value) {
+            openWorkoutEditor(value);
+        }
+    });
+}
+
+if (addExerciseBtn) {
+    addExerciseBtn.addEventListener('click', addExerciseToWorkout);
+}
+
+if (saveWorkoutBtn) {
+    saveWorkoutBtn.addEventListener('click', saveWorkout);
+}
+
+if (deleteWorkoutBtn) {
+    deleteWorkoutBtn.addEventListener('click', deleteWorkout);
+}
+
+if (cancelWorkoutBtn) {
+    cancelWorkoutBtn.addEventListener('click', closeWorkoutEditor);
+}
+
 // Globale Funktionen
-window.deleteTrainingPlan = deleteTrainingPlan;
-window.displayTrainingPlans = displayTrainingPlans;
+window.removeWorkoutExercise = removeWorkoutExercise;
+window.updateWorkoutExercise = updateWorkoutExercise;
+window.toggleBodyweight = toggleBodyweight;
+window.editWorkout = editWorkout;
+window.displayWorkouts = displayWorkouts;
+
+// Alias für Kompatibilität
+function displayTrainingPlans() {
+    displayWorkouts();
+    populateWorkoutSelect();
+}
 
 // ========================================
 // EINSTELLUNGEN - KÖRPERGEWICHT
