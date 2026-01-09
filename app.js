@@ -56,11 +56,8 @@ function migrateOldData() {
 // Trainingseinträge aus localStorage laden (mit Migration)
 let trainings = migrateOldData();
 
-// Plan-Templates (verschiedene Trainingspläne)
-let planTemplates = JSON.parse(localStorage.getItem('planTemplates')) || [];
-
-// Gewichts-Referenzen für Übungen (mit Template-Zuordnung)
-let trainingPlans = JSON.parse(localStorage.getItem('trainingPlans')) || [];
+// Gewichts-Merkhilfe: Übung -> Wiederholungen -> Gewicht
+let weightNotes = JSON.parse(localStorage.getItem('weightNotes')) || [];
 
 let bodyWeights = (JSON.parse(localStorage.getItem('bodyWeights')) || []).sort((a, b) => new Date(b.date) - new Date(a.date));
 let dailyBorgValues = JSON.parse(localStorage.getItem('dailyBorgValues')) || [];
@@ -81,7 +78,7 @@ let currentTrainingType = 'weight';
 const AppState = {
     // Daten-Referenzen (für schrittweise Migration)
     get trainings() { return trainings; },
-    get trainingPlans() { return trainingPlans; },
+    get weightNotes() { return weightNotes; },
     get bodyWeights() { return bodyWeights; },
     get dailyBorgValues() { return dailyBorgValues; },
     get personalInfo() { return personalInfo; },
@@ -229,13 +226,10 @@ const timeGroup = document.getElementById('timeGroup');
 const toggleBtns = document.querySelectorAll('.toggle-btn');
 const differentWeightsCheckbox = document.getElementById('differentWeights');
 
-// Plan elements
-const planTemplateForm = document.getElementById('planTemplateForm');
-const templateList = document.getElementById('templateList');
-const planForm = document.getElementById('planForm');
-const planList = document.getElementById('planList');
-const planTemplateSelect = document.getElementById('planTemplate');
-const weightReferenceInputs = document.getElementById('weightReferenceInputs');
+// Gewichts-Merkhilfe elements
+const weightNoteForm = document.getElementById('weightNoteForm');
+const weightNotesList = document.getElementById('weightNotesList');
+const weightNoteExerciseSelect = document.getElementById('weightNoteExercise');
 
 // Settings elements
 const bodyDataForm = document.getElementById('bodyDataForm');
@@ -244,9 +238,6 @@ const exerciseForm = document.getElementById('exerciseForm');
 const exerciseList = document.getElementById('exerciseList');
 const exerciseSelect = document.getElementById('exercise');
 
-// Target Reps (Plan-Check)
-const targetRepsGroup = document.getElementById('targetRepsGroup');
-const targetRepsSelect = document.getElementById('targetReps');
 
 // ========================================
 // INITIALISIERUNG
@@ -388,93 +379,25 @@ function populateExerciseDropdown() {
         exerciseSelect.value = currentValue;
     }
 
-    // Auch Plan Exercise Dropdown füllen
-    const planExerciseSelect = document.getElementById('planExercise');
-    if (planExerciseSelect) {
-        const planCurrentValue = planExerciseSelect.value;
-        planExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
+    // Auch Gewichts-Merkhilfe Dropdown füllen
+    if (weightNoteExerciseSelect) {
+        const noteCurrentValue = weightNoteExerciseSelect.value;
+        weightNoteExerciseSelect.innerHTML = '<option value="">-- Übung auswählen --</option>';
 
         exercises.forEach(exercise => {
             const option = document.createElement('option');
             option.value = exercise;
             option.textContent = exercise;
-            planExerciseSelect.appendChild(option);
+            weightNoteExerciseSelect.appendChild(option);
         });
 
-        if (planCurrentValue && exercises.includes(planCurrentValue)) {
-            planExerciseSelect.value = planCurrentValue;
+        if (noteCurrentValue && exercises.includes(noteCurrentValue)) {
+            weightNoteExerciseSelect.value = noteCurrentValue;
         }
     }
 
     console.log('Übungs-Dropdowns gefüllt mit', exercises.length, 'Übungen');
 }
-
-// Wiederholungsziel-Dropdown beim Übung-Wechsel aktualisieren
-exerciseSelect.addEventListener('change', function() {
-    const selectedExercise = this.value;
-
-    if (!selectedExercise) {
-        targetRepsGroup.style.display = 'none';
-        return;
-    }
-
-    // Prüfe ob Übung einem Plan zugeordnet ist
-    const plan = trainingPlans.find(p => p.exercise === selectedExercise);
-
-    if (!plan || !plan.templateId) {
-        targetRepsGroup.style.display = 'none';
-        return;
-    }
-
-    // Plan gefunden - Template laden
-    const template = planTemplates.find(t => t.id === plan.templateId);
-
-    if (!template || !template.targetReps || template.targetReps.length === 0) {
-        targetRepsGroup.style.display = 'none';
-        return;
-    }
-
-    // Zeige Target-Reps Dropdown
-    targetRepsGroup.style.display = 'block';
-
-    // Befülle Dropdown mit Zielen aus Template
-    targetRepsSelect.innerHTML = '<option value="">-- Ziel wählen --</option>';
-
-    template.targetReps.forEach(reps => {
-        const totalReps = reps * template.numSets;
-        const option = document.createElement('option');
-        option.value = reps;
-        option.textContent = `${reps} Wdh. pro Satz (Gesamt: ${totalReps})`;
-        targetRepsSelect.appendChild(option);
-    });
-
-    // Hint aktualisieren
-    const hint = document.querySelector('.target-hint');
-    if (hint) {
-        hint.textContent = `Plan: ${template.name} (${template.numSets} Sätze)`;
-    }
-});
-
-// Target Reps Selection - Hinweis aktualisieren
-targetRepsSelect.addEventListener('change', function() {
-    const selectedReps = parseInt(this.value);
-    const selectedExercise = exerciseSelect.value;
-
-    if (!selectedReps || !selectedExercise) return;
-
-    const plan = trainingPlans.find(p => p.exercise === selectedExercise);
-    if (!plan) return;
-
-    const template = planTemplates.find(t => t.id === plan.templateId);
-    if (!template) return;
-
-    const totalTarget = selectedReps * template.numSets;
-    const hint = document.querySelector('.target-hint');
-    if (hint) {
-        hint.textContent = `Ziel: ${template.numSets} Sätze × ${selectedReps} Wdh. = ${totalTarget} Wiederholungen gesamt`;
-        hint.style.fontWeight = '500';
-    }
-});
 
 // ========================================
 // TRAINING HINZUFÜGEN/BEARBEITEN
@@ -499,9 +422,6 @@ form.addEventListener('submit', async function(e) {
         }
     }
 
-    // Wiederholungsziel (optional, wenn Plan zugeordnet)
-    const targetReps = parseInt(targetRepsSelect.value) || null;
-
     let training;
 
     if (editMode) {
@@ -518,7 +438,6 @@ form.addEventListener('submit', async function(e) {
                 timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
                 sets: numSets,
                 reps: reps,
-                targetReps: targetReps,
                 date: document.getElementById('date').value
             };
             trainings[trainingIndex] = training;
@@ -541,7 +460,6 @@ form.addEventListener('submit', async function(e) {
             timeSeconds: currentTrainingType === 'time' ? parseInt(document.getElementById('timeSeconds').value) || 0 : null,
             sets: numSets,
             reps: reps,
-            targetReps: targetReps,
             date: document.getElementById('date').value
         };
         trainings.push(training);
@@ -701,53 +619,6 @@ clearHistoryBtn.addEventListener('click', function() {
 // TRAININGS ANZEIGEN
 // ========================================
 
-/**
- * Prüft ob das Wiederholungsziel für ein Training erreicht wurde
- * Neue Logik: Gesamtwiederholungen zählen (nicht einzelne Sätze)
- * @param {Object} training - Training-Objekt mit targetReps aus dem Plan
- * @returns {Object} { achieved: boolean, repRangeType: string|null, targetReps: number, totalReps: number, goalReps: number }
- */
-function checkRepGoalAchieved(training) {
-    if (training.trainingType === 'time') {
-        return { achieved: false, repRangeType: null, targetReps: 0, totalReps: 0, goalReps: 0 };
-    }
-
-    // Kein Wiederholungsziel gesetzt
-    if (!training.targetReps) {
-        return { achieved: false, repRangeType: null, targetReps: 0, totalReps: 0, goalReps: 0 };
-    }
-
-    // Finde den zugeordneten Plan für diese Übung
-    const plan = trainingPlans.find(p => p.exercise === training.exercise);
-    if (!plan || !plan.templateId) {
-        return { achieved: false, repRangeType: `${training.targetReps}er`, targetReps: training.targetReps, totalReps: 0, goalReps: 0 };
-    }
-
-    // Finde das Template
-    const template = planTemplates.find(t => t.id === plan.templateId);
-    if (!template) {
-        return { achieved: false, repRangeType: `${training.targetReps}er`, targetReps: training.targetReps, totalReps: 0, goalReps: 0 };
-    }
-
-    // Berechne Gesamtwiederholungen (tatsächlich)
-    const repsArray = Array.isArray(training.reps) ? training.reps : [training.reps];
-    const totalReps = repsArray.reduce((sum, rep) => sum + parseInt(rep || 0), 0);
-
-    // Berechne Ziel-Gesamtwiederholungen (targetReps × numSets)
-    const goalReps = training.targetReps * template.numSets;
-
-    // Ziel erreicht, wenn totalReps >= goalReps
-    const achieved = totalReps >= goalReps;
-
-    return {
-        achieved,
-        repRangeType: `${training.targetReps}er`,
-        targetReps: training.targetReps,
-        totalReps,
-        goalReps
-    };
-}
-
 // Globale Variable für aktuell ausgewähltes Datum in der Historie
 let selectedHistoryDate = null;
 
@@ -863,18 +734,6 @@ function displayTrainings() {
             ? training.reps.reduce((sum, rep) => sum + parseInt(rep || 0), 0)
             : parseInt(training.reps || 0);
 
-        // Prüfe ob Wiederholungsziel erreicht
-        const goalCheck = checkRepGoalAchieved(training);
-        const achievedClass = goalCheck.achieved ? 'goal-achieved' : '';
-
-        // Badge mit Ziel-Info anzeigen
-        let repRangeBadge = '';
-        if (goalCheck.repRangeType && goalCheck.goalReps > 0) {
-            const checkIcon = goalCheck.achieved ? '✓' : '✗';
-            const badgeText = `${goalCheck.repRangeType} (${goalCheck.totalReps}/${goalCheck.goalReps}) ${checkIcon}`;
-            repRangeBadge = `<span class="rep-range-badge ${goalCheck.achieved ? 'achieved' : 'not-achieved'}">${badgeText}</span>`;
-        }
-
         // Gewicht oder Zeit anzeigen
         let valueDisplay = '';
         if (training.trainingType === 'time') {
@@ -891,9 +750,9 @@ function displayTrainings() {
         }
 
         return `
-            <div class="training-item ${achievedClass}">
+            <div class="training-item">
                 <div class="training-info">
-                    <h3>${training.exercise} ${repRangeBadge}</h3>
+                    <h3>${training.exercise}</h3>
                     <div class="training-details">
                         <div class="detail-item">
                             <div class="detail-label">${training.trainingType === 'time' ? 'Zeit' : 'Gewicht'}</div>
@@ -1149,272 +1008,123 @@ function displayPersonalRecords() {
 }
 
 // ========================================
-// PLAN-TEMPLATES VERWALTUNG
+// GEWICHTS-MERKHILFE
 // ========================================
 
-// Standard-Templates beim ersten Start erstellen
-if (planTemplates.length === 0) {
-    planTemplates.push({
-        id: Date.now(),
-        name: '10x6x3',
-        numSets: 4,
-        targetReps: [10, 6, 3] // Wiederholungsziele für verschiedene Trainingstage
-    });
-    planTemplates.push({
-        id: Date.now() + 1,
-        name: 'Klimmzüge 4x10',
-        numSets: 4,
-        targetReps: [10] // Jede Woche 4 Sätze à 10 Wdh.
-    });
-    localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
-}
+// Gewichts-Notiz hinzufügen
+if (weightNoteForm) {
+    weightNoteForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-// Template hinzufügen
-planTemplateForm.addEventListener('submit', function(e) {
-    e.preventDefault();
+        const exercise = weightNoteExerciseSelect.value;
+        const reps = parseInt(document.getElementById('weightNoteReps').value);
+        const weight = parseFloat(document.getElementById('weightNoteWeight').value);
 
-    const name = document.getElementById('templateName').value.trim();
-    const numSets = parseInt(document.getElementById('templateNumSets').value);
-    const repsInput = document.getElementById('templateReps').value.trim();
+        if (!exercise || !reps || isNaN(weight)) {
+            showNotification('Bitte alle Felder ausfüllen!');
+            return;
+        }
 
-    if (!name || !numSets || !repsInput) return;
+        // Prüfen ob Eintrag für diese Übung+Wiederholungen bereits existiert
+        const existingIndex = weightNotes.findIndex(n => n.exercise === exercise && n.reps === reps);
 
-    // Parse Wiederholungsziele
-    const targetReps = repsInput.split(',').map(s => parseInt(s.trim())).filter(s => s > 0);
+        const note = {
+            id: existingIndex !== -1 ? weightNotes[existingIndex].id : Date.now(),
+            exercise: exercise,
+            reps: reps,
+            weight: weight
+        };
 
-    if (targetReps.length === 0) {
-        showNotification('⚠️ Bitte gültige Wiederholungsziele eingeben (z.B. 10,6,3)');
-        return;
-    }
+        if (existingIndex !== -1) {
+            weightNotes[existingIndex] = note;
+            showNotification('Gewicht aktualisiert!');
+        } else {
+            weightNotes.push(note);
+            showNotification('Gewicht gespeichert!');
+        }
 
-    // Prüfen ob Name bereits existiert
-    if (planTemplates.some(t => t.name === name)) {
-        showNotification('⚠️ Template-Name existiert bereits!');
-        return;
-    }
-
-    const template = {
-        id: Date.now(),
-        name: name,
-        numSets: numSets,
-        targetReps: targetReps
-    };
-
-    planTemplates.push(template);
-    localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
-
-    // Sync zur Cloud
-    if (typeof syncPlanTemplatesToCloud === 'function') {
-        syncPlanTemplatesToCloud();
-    }
-
-    displayPlanTemplates();
-    populateTemplateDropdown();
-    planTemplateForm.reset();
-    document.getElementById('templateNumSets').value = 4; // Reset auf 4
-    showNotification('Template erstellt!');
-});
-
-// Templates anzeigen
-function displayPlanTemplates() {
-    const summaryEl = document.getElementById('templateSummary');
-    if (summaryEl) {
-        summaryEl.textContent = `Gespeicherte Templates anzeigen (${planTemplates.length})`;
-    }
-
-    if (planTemplates.length === 0) {
-        templateList.innerHTML = '<p style="text-align: center; color: #999;">Noch keine Templates</p>';
-        return;
-    }
-
-    templateList.innerHTML = planTemplates.map(template => {
-        const repsDisplay = template.targetReps.join(', ');
-        const totalReps = template.targetReps.map(r => r * template.numSets);
-        const totalsDisplay = totalReps.join(' / ');
-
-        return `
-            <div class="template-item">
-                <div>
-                    <span class="template-name">${template.name}</span>
-                    <span class="template-sets">${template.numSets} Sätze | Ziele: ${repsDisplay} Wdh. (Gesamt: ${totalsDisplay})</span>
-                </div>
-                <button class="delete-btn" onclick="deleteTemplate(${template.id})">Löschen</button>
-            </div>
-        `;
-    }).join('');
-}
-
-// Template löschen
-function deleteTemplate(id) {
-    if (confirm('Template wirklich löschen?')) {
-        planTemplates = planTemplates.filter(t => t.id !== id);
-        localStorage.setItem('planTemplates', JSON.stringify(planTemplates));
+        localStorage.setItem('weightNotes', JSON.stringify(weightNotes));
 
         // Sync zur Cloud
-        if (typeof syncPlanTemplatesToCloud === 'function') {
-            syncPlanTemplatesToCloud();
+        if (typeof syncWeightNoteToCloud === 'function') {
+            await syncWeightNoteToCloud(note);
         }
 
-        displayPlanTemplates();
-        populateTemplateDropdown();
-        showNotification('Template gelöscht!');
-    }
-}
-
-// Template-Dropdown befüllen
-function populateTemplateDropdown() {
-    if (!planTemplateSelect) return;
-
-    const currentValue = planTemplateSelect.value;
-    planTemplateSelect.innerHTML = '<option value="">-- Plan auswählen --</option>';
-
-    planTemplates.forEach(template => {
-        const option = document.createElement('option');
-        option.value = template.id;
-        const repsDisplay = template.targetReps.join(', ');
-        option.textContent = `${template.name} (${template.numSets} Sätze: ${repsDisplay} Wdh.)`;
-        planTemplateSelect.appendChild(option);
+        displayWeightNotes();
+        weightNoteForm.reset();
     });
-
-    if (currentValue) {
-        planTemplateSelect.value = currentValue;
-    }
 }
 
-// ========================================
-// TRAININGSPLAN (Übung → Plan Zuordnung)
-// ========================================
+// Gewichts-Notizen anzeigen (gruppiert nach Übung)
+function displayWeightNotes() {
+    if (!weightNotesList) return;
 
-planForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    const exercise = document.getElementById('planExercise').value;
-    const templateId = parseInt(planTemplateSelect.value) || null;
-
-    if (!templateId) {
-        showNotification('⚠️ Bitte einen Plan auswählen!');
-        return;
-    }
-
-    const template = planTemplates.find(t => t.id === templateId);
-    if (!template) return;
-
-    const existingPlanIndex = trainingPlans.findIndex(p => p.exercise === exercise);
-
-    const plan = {
-        id: existingPlanIndex !== -1 ? trainingPlans[existingPlanIndex].id : Date.now(),
-        exercise: exercise,
-        templateId: templateId,
-        templateName: template.name
-    };
-
-    if (existingPlanIndex !== -1) {
-        trainingPlans[existingPlanIndex] = plan;
-        showNotification('Plan-Zuordnung aktualisiert!');
-    } else {
-        trainingPlans.push(plan);
-        showNotification('Übung zu Plan zugeordnet!');
-    }
-
-    localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
-
-    if (typeof syncPlanToCloud === 'function') {
-        await syncPlanToCloud(plan);
-    }
-
-    displayTrainingPlans();
-    planForm.reset();
-});
-
-function displayTrainingPlans() {
-    if (trainingPlans.length === 0) {
-        planList.innerHTML = `
+    if (weightNotes.length === 0) {
+        weightNotesList.innerHTML = `
             <div class="empty-state">
-                <p>Noch keine Übungen zugeordnet.</p>
-                <p>Ordne deine erste Übung einem Plan zu! 📋</p>
+                <p>Noch keine Gewichte notiert.</p>
+                <p>Trage dein erstes Gewicht ein!</p>
             </div>
         `;
         return;
     }
 
-    planList.innerHTML = trainingPlans.map(plan => {
-        const template = planTemplates.find(t => t.id === plan.templateId);
-        const templateName = template ? template.name : plan.templateName || 'Unbekannt';
-
-        let planDetails = '';
-        if (template) {
-            const repsDisplay = template.targetReps.join(', ');
-            const totalReps = template.targetReps.map(r => r * template.numSets);
-            const totalsDisplay = totalReps.join(' / ');
-            planDetails = `
-                <div class="weight-reference-table">
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">Sätze:</div>
-                        <div class="weight-ref-value">${template.numSets}</div>
-                    </div>
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">Ziel-Wiederholungen:</div>
-                        <div class="weight-ref-value">${repsDisplay}</div>
-                    </div>
-                    <div class="weight-ref-row">
-                        <div class="weight-ref-label">Gesamt pro Ziel:</div>
-                        <div class="weight-ref-value">${totalsDisplay}</div>
-                    </div>
-                </div>
-            `;
+    // Gruppiere nach Übung
+    const groupedNotes = {};
+    weightNotes.forEach(note => {
+        if (!groupedNotes[note.exercise]) {
+            groupedNotes[note.exercise] = [];
         }
+        groupedNotes[note.exercise].push(note);
+    });
+
+    // Sortiere Wiederholungen innerhalb jeder Gruppe (absteigend: höhere Wdh. zuerst)
+    Object.keys(groupedNotes).forEach(exercise => {
+        groupedNotes[exercise].sort((a, b) => b.reps - a.reps);
+    });
+
+    // HTML generieren
+    const html = Object.keys(groupedNotes).sort().map(exercise => {
+        const notes = groupedNotes[exercise];
+        const notesHtml = notes.map(note => `
+            <div class="weight-note-row">
+                <span class="weight-note-reps">${note.reps} Wdh.</span>
+                <span class="weight-note-weight">${note.weight} kg</span>
+                <button class="delete-btn-small" onclick="deleteWeightNote(${note.id})">×</button>
+            </div>
+        `).join('');
 
         return `
-            <div class="plan-item">
-                <div class="plan-info">
-                    <h3>${plan.exercise}</h3>
-                    <div class="plan-type">Plan: ${templateName}</div>
-                    ${planDetails}
-                </div>
-                <div class="plan-actions">
-                    <button class="edit-btn" onclick="editPlan(${plan.id})">Bearbeiten</button>
-                    <button class="delete-btn" onclick="deletePlan(${plan.id})">Löschen</button>
+            <div class="weight-note-card">
+                <h3 class="weight-note-exercise">${exercise}</h3>
+                <div class="weight-note-list">
+                    ${notesHtml}
                 </div>
             </div>
         `;
     }).join('');
+
+    weightNotesList.innerHTML = html;
 }
 
-function editPlan(id) {
-    const plan = trainingPlans.find(p => p.id === id);
-    if (!plan) return;
-
-    // Übung auswählen
-    document.getElementById('planExercise').value = plan.exercise;
-
-    // Template auswählen
-    if (plan.templateId) {
-        planTemplateSelect.value = plan.templateId;
-    }
-
-    // Scroll zum Formular
-    document.getElementById('planForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-async function deletePlan(id) {
-    if (confirm('Diese Übung wirklich löschen?')) {
-        trainingPlans = trainingPlans.filter(p => p.id !== id);
-        localStorage.setItem('trainingPlans', JSON.stringify(trainingPlans));
+// Gewichts-Notiz löschen
+async function deleteWeightNote(id) {
+    if (confirm('Diesen Eintrag wirklich löschen?')) {
+        weightNotes = weightNotes.filter(n => n.id !== id);
+        localStorage.setItem('weightNotes', JSON.stringify(weightNotes));
 
         // Aus Cloud löschen
-        if (typeof deletePlanFromCloud === 'function') {
-            await deletePlanFromCloud(id);
+        if (typeof deleteWeightNoteFromCloud === 'function') {
+            await deleteWeightNoteFromCloud(id);
         }
 
-        displayTrainingPlans();
-        showNotification('Übung gelöscht!');
+        displayWeightNotes();
+        showNotification('Eintrag gelöscht!');
     }
 }
 
-// Globale Funktionen für onclick-Handler
-window.editPlan = editPlan;
-window.deletePlan = deletePlan;
-window.deleteTemplate = deleteTemplate;
+// Globale Funktion für onclick-Handler
+window.deleteWeightNote = deleteWeightNote;
 
 // ========================================
 // EINSTELLUNGEN - KÖRPERGEWICHT
@@ -2642,9 +2352,9 @@ tabButtons.forEach(button => {
             displayPersonalRecords();
         }
 
-        // Training Plans anzeigen
+        // Gewichts-Merkhilfe anzeigen
         if (tabName === 'plan') {
-            displayTrainingPlans();
+            displayWeightNotes();
         }
 
         // Settings laden
@@ -2797,7 +2507,7 @@ if (!window.hideLoginModal) {
 // Display-Funktionen für sync.js exportieren
 window.displayTrainings = displayTrainings;
 window.displayPersonalRecords = displayPersonalRecords;
-window.displayTrainingPlans = displayTrainingPlans;
+window.displayWeightNotes = displayWeightNotes;
 window.displayBodyWeightHistory = displayBodyWeightHistory;
 window.populateExerciseDropdown = populateExerciseDropdown;
 window.displayExerciseList = displayExerciseList;
@@ -2817,10 +2527,8 @@ async function initApp() {
     displayTrainings();
     displayPersonalRecords();
 
-    // Plan-Templates initialisieren
-    displayPlanTemplates();
-    populateTemplateDropdown();
-    displayTrainingPlans();
+    // Gewichts-Merkhilfe initialisieren
+    displayWeightNotes();
 
     displayBodyWeightHistory();
     displayExerciseList();
@@ -2917,7 +2625,7 @@ async function initApp() {
                 // Fallback: Update UI direkt
                 displayTrainings();
                 displayPersonalRecords();
-                displayTrainingPlans();
+                displayWeightNotes();
                 displayBodyWeightHistory();
                 populateExerciseDropdown();
                 displayExerciseList();

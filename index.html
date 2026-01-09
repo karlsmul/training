@@ -65,16 +65,6 @@
                         </select>
                     </div>
 
-                    <!-- Wiederholungsziel (falls Plan zugeordnet) -->
-                    <div class="form-group" id="targetRepsGroup" style="display: none;">
-                        <label for="targetReps">Wiederholungsziel heute:</label>
-                        <select id="targetReps">
-                            <option value="">-- Ziel wählen --</option>
-                            <!-- Wird dynamisch basierend auf Plan gefüllt -->
-                        </select>
-                        <p class="target-hint" style="font-size: 0.85rem; color: #667eea; margin-top: 5px;"></p>
-                    </div>
-
                     <!-- Toggle zwischen Gewicht und Zeit -->
                     <div class="form-group">
                         <label>Trainingsart:</label>
@@ -155,77 +145,42 @@
                     <div id="trainingList" class="training-list"></div>
                 </div>
 
-                <!-- Training Plan Tab -->
+                <!-- Training Plan Tab - Gewichts-Merkhilfe -->
                 <div id="planTab" class="tab-content">
                     <div class="plan-header">
-                        <h2>Trainingsplan-Verwaltung</h2>
-                        <p class="plan-subtitle">Verwalte deine Trainingspläne und Gewichts-Referenzen</p>
+                        <h2>Gewichts-Merkhilfe</h2>
+                        <p class="plan-subtitle">Notiere dir, welches Gewicht du bei welcher Wiederholungszahl verwendest</p>
                     </div>
 
-                    <!-- Plan-Templates verwalten -->
-                    <div class="plan-templates-section">
-                        <h3>Plan-Templates</h3>
-                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
-                            Erstelle Trainingsplan-Vorlagen (z.B. "4x10x6x3" oder "4x10")
-                        </p>
-
-                        <form id="planTemplateForm">
-                            <div class="form-row">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="templateName">Template-Name:</label>
-                                    <input type="text" id="templateName" placeholder="z.B. 10x6x4 oder Klimmzüge" required>
-                                </div>
-                                <div class="form-group" style="flex: 0 0 auto;">
-                                    <label for="templateNumSets">Anzahl Sätze:</label>
-                                    <input type="number" id="templateNumSets" min="1" max="10" value="4" required style="width: 80px;">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="templateReps">Ziel-Wiederholungen (kommagetrennt):</label>
-                                    <input type="text" id="templateReps" placeholder="z.B. 10,6,4 oder 10,10,10,10" required>
-                                </div>
-                            </div>
-                            <p style="font-size: 0.85rem; color: #666; margin-top: -10px;">
-                                Tipp: Bei 4 Sätzen mit Ziel "10,6,4" ist Satz 4 frei wählbar.
-                            </p>
-                            <button type="submit" class="btn-primary">Template erstellen</button>
-                        </form>
-
-                        <!-- Template-Liste -->
-                        <details class="template-details">
-                            <summary id="templateSummary">Gespeicherte Templates anzeigen (0)</summary>
-                            <div id="templateList" class="template-list">
-                                <!-- Templates werden hier angezeigt -->
-                            </div>
-                        </details>
-                    </div>
-
-                    <!-- Übungen zu Plan zuordnen -->
-                    <div class="plan-form-container" style="margin-top: 30px;">
-                        <h3>Übungen einem Plan zuordnen</h3>
-                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
-                            Ordne jeder Übung einen Trainingsplan zu. Der Plan definiert die Ziel-Wiederholungen pro Satz.
-                        </p>
-                        <form id="planForm">
+                    <!-- Neue Gewichts-Notiz hinzufügen -->
+                    <div class="weight-note-form-container">
+                        <h3>Gewicht eintragen</h3>
+                        <form id="weightNoteForm">
                             <div class="form-group">
-                                <label for="planExercise">Übung:</label>
-                                <select id="planExercise" required>
+                                <label for="weightNoteExercise">Übung:</label>
+                                <select id="weightNoteExercise" required>
                                     <option value="">-- Übung auswählen --</option>
                                 </select>
                             </div>
 
-                            <div class="form-group">
-                                <label for="planTemplate">Trainingsplan:</label>
-                                <select id="planTemplate" required>
-                                    <option value="">-- Plan auswählen --</option>
-                                </select>
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="weightNoteReps">Wiederholungen:</label>
+                                    <input type="number" id="weightNoteReps" min="1" max="50" placeholder="z.B. 10" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="weightNoteWeight">Gewicht (kg):</label>
+                                    <input type="number" id="weightNoteWeight" min="0" step="0.5" placeholder="z.B. 100" required>
+                                </div>
                             </div>
 
-                            <button type="submit" class="btn-primary">Zuordnung speichern</button>
+                            <button type="submit" class="btn-primary">Speichern</button>
                         </form>
                     </div>
 
-                    <div id="planList" class="plan-list">
-                        <!-- Plan-Zuordnungen werden hier angezeigt -->
+                    <!-- Gewichts-Übersicht nach Übung -->
+                    <div id="weightNotesList" class="weight-notes-list">
+                        <!-- Gewichts-Notizen werden hier angezeigt -->
                     </div>
                 </div>
 
