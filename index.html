@@ -21,7 +21,7 @@
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
 
-    <link rel="stylesheet" href="style.css?v=40">
+    <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
     <div class="container">
@@ -136,7 +136,7 @@
                     </div>
 
                     <div class="filter-section">
-                        <input type="text" id="searchExercise" placeholder="Übung suchen...">
+                        <input type="text" id="searchExercise" placeholder="Suche: Bankdrücken oder Bankdrücken 80">
                         <select id="historyDateSelect">
                             <!-- Wird dynamisch gefüllt -->
                         </select>
@@ -386,14 +386,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=40"></script>
-    <script src="sync.js?v=40"></script>
+    <script src="firebase-config.js?v=41"></script>
+    <script src="sync.js?v=41"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=40"></script>
+    <script src="plan-analysis.js?v=41"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=40"></script>
+    <script src="app.js?v=41"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -405,7 +405,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v40') {
+                        if (cacheName !== 'krafttraining-v41') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -415,7 +415,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=40')
+                navigator.serviceWorker.register('/service-worker.js?v=41')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

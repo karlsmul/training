@@ -797,18 +797,65 @@ function renderTrainingItems(trainingsList) {
     }).join('');
 }
 
+// Suchbegriff parsen: Übung und optional Gewicht extrahieren
+// Beispiele: "Bankdrücken" -> {exercise: "bankdrücken", weight: null}
+//            "Bankdrücken 80" -> {exercise: "bankdrücken", weight: 80}
+//            "Bankdrücken 80kg" -> {exercise: "bankdrücken", weight: 80}
+function parseSearchTerm(searchTerm) {
+    // Regex: Alles vor einer Zahl ist die Übung, Zahl (optional mit kg) ist das Gewicht
+    const weightMatch = searchTerm.match(/^(.+?)\s+(\d+(?:[.,]\d+)?)\s*(?:kg)?$/i);
+
+    if (weightMatch) {
+        return {
+            exercise: weightMatch[1].trim().toLowerCase(),
+            weight: parseFloat(weightMatch[2].replace(',', '.'))
+        };
+    }
+
+    return {
+        exercise: searchTerm.toLowerCase(),
+        weight: null
+    };
+}
+
+// Prüfe ob ein Training das gesuchte Gewicht enthält
+function trainingMatchesWeight(training, targetWeight) {
+    if (targetWeight === null) return true;
+
+    // Prüfe weightsPerSet (mehrere Gewichte pro Satz)
+    if (training.weightsPerSet && training.weightsPerSet.length > 0) {
+        return training.weightsPerSet.some(w => parseFloat(w) === targetWeight);
+    }
+
+    // Prüfe einzelnes Gewicht
+    if (training.weight) {
+        return parseFloat(training.weight) === targetWeight;
+    }
+
+    return false;
+}
+
 // Suchergebnisse anzeigen (alle Tage durchsuchen)
 function displaySearchResults(searchTerm) {
-    // Alle Trainings nach Suchbegriff filtern
-    const matchingTrainings = trainings.filter(training =>
-        training.exercise.toLowerCase().includes(searchTerm)
-    );
+    // Suchbegriff parsen (Übung + optional Gewicht)
+    const { exercise: exerciseSearch, weight: weightSearch } = parseSearchTerm(searchTerm);
+
+    // Alle Trainings nach Suchbegriff und optional Gewicht filtern
+    const matchingTrainings = trainings.filter(training => {
+        const matchesExercise = training.exercise.toLowerCase().includes(exerciseSearch);
+        const matchesWeight = trainingMatchesWeight(training, weightSearch);
+        return matchesExercise && matchesWeight;
+    });
 
     if (matchingTrainings.length === 0) {
+        const searchDescription = weightSearch
+            ? `"${exerciseSearch}" mit ${weightSearch} kg`
+            : `"${searchTerm}"`;
+
         trainingList.innerHTML = `
             <div class="empty-state">
-                <p>Keine Übung "${searchTerm}" gefunden.</p>
-                <p class="search-hint">Suche in allen Trainingstagen.</p>
+                <p>Keine Übung ${searchDescription} gefunden.</p>
+                <p class="search-hint">Tipp: Suche nach "Bankdrücken 80" für alle Einträge mit 80 kg</p>
             </div>
         `;
         return;
@@ -856,11 +903,16 @@ function displaySearchResults(searchTerm) {
         `;
     }).join('');
 
+    // Suchanzeige erstellen
+    const searchDescription = weightSearch
+        ? `"<em>${exerciseSearch}</em>" mit <em>${weightSearch} kg</em>`
+        : `"<em>${searchTerm}</em>"`;
+
     trainingList.innerHTML = `
         <div class="search-results-header">
             <div class="search-results-info">
                 <span class="search-icon">🔍</span>
-                <strong>${totalCount}</strong> Ergebnisse für "<em>${searchTerm}</em>" an <strong>${sortedDates.length}</strong> Tagen
+                <strong>${totalCount}</strong> Ergebnisse für ${searchDescription} an <strong>${sortedDates.length}</strong> Tagen
             </div>
         </div>
         ${allDaysHTML}
