@@ -21,7 +21,7 @@
     <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
 
-    <link rel="stylesheet" href="style.css?v=41">
+    <link rel="stylesheet" href="style.css?v=42">
 </head>
 <body>
     <div class="container">
@@ -126,6 +126,7 @@
                     <button class="tab-btn" data-tab="stats">📈 Auswertung</button>
                     <button class="tab-btn" data-tab="records">🏆 PRs</button>
                     <button class="tab-btn" data-tab="settings">⚙️ Einstellungen</button>
+                    <button class="tab-btn" data-tab="info">ℹ️ Info</button>
                 </div>
 
                 <!-- Training History Tab -->
@@ -338,6 +339,152 @@
                         </div>
                     </div>
 
+                    <!-- Datenschutz & Speicherung -->
+                    <div id="storageModeSection" class="settings-section" style="display: none;">
+                        <h3>Datenschutz & Speicherung</h3>
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                            Wähle, wo deine Trainingsdaten gespeichert werden sollen.
+                        </p>
+
+                        <div class="storage-options">
+                            <!-- Cloud Option -->
+                            <label class="storage-option" id="cloudOption">
+                                <input type="radio" name="storageMode" value="cloud" checked>
+                                <div class="storage-option-content">
+                                    <div class="storage-option-header">
+                                        <span class="storage-icon">☁️</span>
+                                        <span class="storage-title">Cloud-Speicherung</span>
+                                        <span class="storage-badge recommended">Empfohlen</span>
+                                    </div>
+                                    <p class="storage-description">Daten werden sicher in der Cloud (Firebase) gespeichert.</p>
+                                    <ul class="storage-features">
+                                        <li class="feature-positive">Sync zwischen allen Geräten</li>
+                                        <li class="feature-positive">Automatische Backups</li>
+                                        <li class="feature-positive">Daten sicher bei Geräteverlust</li>
+                                    </ul>
+                                </div>
+                            </label>
+
+                            <!-- Lokal Option -->
+                            <label class="storage-option" id="localOption">
+                                <input type="radio" name="storageMode" value="local">
+                                <div class="storage-option-content">
+                                    <div class="storage-option-header">
+                                        <span class="storage-icon">📱</span>
+                                        <span class="storage-title">Nur lokale Speicherung</span>
+                                    </div>
+                                    <p class="storage-description">Daten werden nur auf diesem Gerät gespeichert.</p>
+                                    <ul class="storage-features">
+                                        <li class="feature-positive">Maximaler Datenschutz</li>
+                                        <li class="feature-positive">Keine Cloud-Verbindung nötig</li>
+                                        <li class="feature-negative">Kein Sync zwischen Geräten</li>
+                                        <li class="feature-negative">Datenverlust bei Geräteverlust möglich</li>
+                                    </ul>
+                                </div>
+                            </label>
+                        </div>
+
+                        <p id="storageModeStatus" class="storage-status"></p>
+                        <p style="color: #888; font-size: 0.8rem; margin-top: 10px;">
+                            Hinweis: Bereits gespeicherte Daten werden nicht automatisch migriert.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Info Tab -->
+                <div id="infoTab" class="tab-content">
+                    <div class="info-header">
+                        <h2>Datenspeicherung & Datenschutz</h2>
+                    </div>
+
+                    <!-- Einführung -->
+                    <div class="info-card">
+                        <h3>Wie werden meine Daten gespeichert?</h3>
+                        <p>
+                            Kreuzheben verwendet <strong>Firebase Cloud Firestore</strong> von Google,
+                            um deine Trainingsdaten sicher in der Cloud zu speichern. Zusätzlich werden deine Daten
+                            lokal auf deinem Gerät zwischengespeichert, damit die App auch offline funktioniert.
+                        </p>
+                    </div>
+
+                    <!-- Cloud-Speicherung -->
+                    <div class="info-card cloud-card">
+                        <h3>☁️ Cloud-Speicherung (Firebase)</h3>
+
+                        <div class="info-section">
+                            <h4>Vorteile:</h4>
+                            <ul class="info-list positive">
+                                <li><strong>Geräteübergreifend:</strong> Greife von jedem Gerät auf deine Daten zu - Handy, Tablet oder Computer.</li>
+                                <li><strong>Automatische Backups:</strong> Deine Daten werden automatisch gesichert und gehen nicht verloren.</li>
+                                <li><strong>Echtzeit-Synchronisierung:</strong> Änderungen werden sofort auf allen Geräten sichtbar.</li>
+                                <li><strong>Offline-Funktion:</strong> Die App funktioniert auch ohne Internet dank lokalem Cache.</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-section">
+                            <h4>Nachteile:</h4>
+                            <ul class="info-list negative">
+                                <li><strong>Daten auf fremden Servern:</strong> Deine Daten liegen auf Google-Servern (Firebase).</li>
+                                <li><strong>Internet erforderlich:</strong> Für die erste Anmeldung und Synchronisierung wird Internet benötigt.</li>
+                                <li><strong>Abhängigkeit vom Anbieter:</strong> Falls Firebase eingestellt wird, müssten Daten migriert werden.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Lokale Speicherung -->
+                    <div class="info-card local-card">
+                        <h3>📱 Lokale Speicherung (localStorage/IndexedDB)</h3>
+
+                        <div class="info-section">
+                            <h4>Vorteile:</h4>
+                            <ul class="info-list positive">
+                                <li><strong>Volle Kontrolle:</strong> Alle Daten bleiben nur auf deinem Gerät.</li>
+                                <li><strong>Keine Internetverbindung nötig:</strong> Die App funktioniert komplett offline.</li>
+                                <li><strong>Maximale Privatsphäre:</strong> Kein Drittanbieter hat Zugriff auf deine Trainingsdaten.</li>
+                            </ul>
+                        </div>
+
+                        <div class="info-section">
+                            <h4>Nachteile:</h4>
+                            <ul class="info-list negative">
+                                <li><strong>Kein Backup:</strong> Wenn du dein Gerät verlierst oder den Browser-Cache löschst, sind die Daten weg.</li>
+                                <li><strong>Nur ein Gerät:</strong> Daten sind nicht auf anderen Geräten verfügbar.</li>
+                                <li><strong>Speicherlimit:</strong> Browser begrenzen den lokalen Speicherplatz.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Aktuelle Konfiguration -->
+                    <div class="info-card config-card">
+                        <h3>Deine aktuelle Konfiguration</h3>
+                        <p id="currentStorageInfo">
+                            Kreuzheben nutzt derzeit die <strong>Cloud-Speicherung</strong> mit lokalem Cache.
+                        </p>
+                        <ul class="info-list neutral">
+                            <li>Deine Daten werden sicher in Firebase gespeichert</li>
+                            <li>Eine lokale Kopie ermöglicht Offline-Nutzung</li>
+                            <li>Änderungen werden automatisch synchronisiert, sobald du online bist</li>
+                        </ul>
+                        <p style="margin-top: 15px;">
+                            Du kannst den Speichermodus in den <a href="#" onclick="switchToSettings()">Einstellungen</a> ändern.
+                        </p>
+                    </div>
+
+                    <!-- Sicherheit -->
+                    <div class="info-card security-card">
+                        <h3>🔒 Sicherheitshinweise</h3>
+                        <ul class="info-list security">
+                            <li>🔒 Alle Daten werden über verschlüsselte Verbindungen (HTTPS) übertragen.</li>
+                            <li>👤 Jeder Nutzer kann nur seine eigenen Daten sehen - andere Nutzer haben keinen Zugriff.</li>
+                            <li>🔑 Verwende ein starkes Passwort mit Groß-/Kleinbuchstaben, Zahlen und Sonderzeichen.</li>
+                            <li>📱 Melde dich auf öffentlichen Geräten immer ab, um unbefugten Zugriff zu verhindern.</li>
+                        </ul>
+                    </div>
+
+                    <p class="info-footer">
+                        Bei Fragen zur Datenspeicherung wende dich an den App-Entwickler.
+                    </p>
                 </div>
             </section>
         </main>
@@ -347,33 +494,105 @@
     <div id="loginModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="modal-close" id="modalClose">&times;</span>
-            <h2>🔐 Anmelden</h2>
-            <p>Melde dich an, um deine Trainings in der Cloud zu synchronisieren</p>
 
-            <button id="googleLoginButton" class="btn-google">
-                <span class="google-icon">G</span>
-                Mit Google anmelden
-            </button>
+            <!-- Login View -->
+            <div id="loginView">
+                <h2>🔐 Anmelden</h2>
+                <p>Melde dich an, um deine Trainings in der Cloud zu synchronisieren</p>
 
-            <div class="divider">
-                <span>oder</span>
+                <button id="googleLoginButton" class="btn-google">
+                    <svg class="google-icon-svg" viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Mit Google anmelden
+                </button>
+
+                <div class="divider">
+                    <span>oder</span>
+                </div>
+
+                <form id="emailLoginForm">
+                    <div class="form-group">
+                        <input type="email" id="loginEmail" placeholder="E-Mail" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="loginPassword" placeholder="Passwort" required autocomplete="current-password" minlength="6">
+                    </div>
+                    <div id="loginError" class="auth-error" style="display: none;"></div>
+                    <button type="submit" class="btn-primary" id="loginSubmitBtn">Anmelden</button>
+                </form>
+
+                <p class="modal-footer">
+                    Noch kein Konto? <a href="#" id="registerLink">Registrieren</a>
+                    <br>
+                    <a href="#" id="forgotPasswordLink">Passwort vergessen?</a>
+                </p>
             </div>
 
-            <form id="emailLoginForm">
-                <div class="form-group">
-                    <input type="email" id="loginEmail" placeholder="E-Mail" required autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <input type="password" id="loginPassword" placeholder="Passwort (mind. 6 Zeichen)" required autocomplete="current-password" minlength="6">
-                </div>
-                <button type="submit" class="btn-primary">Mit E-Mail anmelden</button>
-            </form>
+            <!-- Register View -->
+            <div id="registerView" style="display: none;">
+                <h2>📝 Registrieren</h2>
+                <p>Erstelle ein Konto, um deine Daten zu synchronisieren</p>
 
-            <p class="modal-footer">
-                Noch kein Konto? <a href="#" id="registerLink">Registrieren</a>
-                <br>
-                <a href="#" id="forgotPasswordLink">Passwort vergessen?</a>
-            </p>
+                <form id="emailRegisterForm">
+                    <div class="form-group">
+                        <input type="email" id="registerEmail" placeholder="E-Mail" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="registerPassword" placeholder="Passwort" required autocomplete="new-password" minlength="8">
+                        <div id="passwordRequirements" class="password-requirements">
+                            <p>Passwort-Anforderungen:</p>
+                            <ul>
+                                <li id="reqLength">○ Mindestens 8 Zeichen</li>
+                                <li id="reqUppercase">○ Großbuchstabe (A-Z)</li>
+                                <li id="reqLowercase">○ Kleinbuchstabe (a-z)</li>
+                                <li id="reqNumber">○ Zahl (0-9)</li>
+                                <li id="reqSpecial">○ Sonderzeichen (!@#$...)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="registerPasswordConfirm" placeholder="Passwort bestätigen" required autocomplete="new-password" minlength="8">
+                    </div>
+                    <div id="registerError" class="auth-error" style="display: none;"></div>
+                    <button type="submit" class="btn-primary" id="registerSubmitBtn">Registrieren</button>
+                </form>
+
+                <p class="modal-footer">
+                    Bereits registriert? <a href="#" id="backToLoginLink">Anmelden</a>
+                </p>
+            </div>
+
+            <!-- Forgot Password View -->
+            <div id="forgotPasswordView" style="display: none;">
+                <h2>🔑 Passwort zurücksetzen</h2>
+                <p>Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen.</p>
+
+                <form id="forgotPasswordForm">
+                    <div class="form-group">
+                        <input type="email" id="resetEmail" placeholder="E-Mail" required autocomplete="email">
+                    </div>
+                    <div id="resetError" class="auth-error" style="display: none;"></div>
+                    <div id="resetSuccess" class="auth-success" style="display: none;"></div>
+                    <button type="submit" class="btn-primary" id="resetSubmitBtn">Link senden</button>
+                </form>
+
+                <p class="modal-footer">
+                    <a href="#" id="backToLoginFromReset">Zurück zur Anmeldung</a>
+                </p>
+            </div>
+
+            <!-- Verification Sent View -->
+            <div id="verificationSentView" style="display: none;">
+                <div class="verification-icon">📧</div>
+                <h2>Bestätigungs-E-Mail gesendet</h2>
+                <p id="verificationEmailText">Wir haben eine Bestätigungs-E-Mail gesendet. Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.</p>
+                <p class="verification-hint">Prüfe auch deinen Spam-Ordner, falls du die E-Mail nicht findest.</p>
+                <button class="btn-primary" id="backToLoginFromVerification">Zur Anmeldung</button>
+            </div>
         </div>
     </div>
 
@@ -386,14 +605,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
     <!-- Firebase Config & Sync -->
-    <script src="firebase-config.js?v=41"></script>
-    <script src="sync.js?v=41"></script>
+    <script src="firebase-config.js?v=42"></script>
+    <script src="sync.js?v=42"></script>
 
     <!-- Big 3 Plan-Auswertung -->
-    <script src="plan-analysis.js?v=41"></script>
+    <script src="plan-analysis.js?v=42"></script>
 
     <!-- Main App -->
-    <script src="app.js?v=41"></script>
+    <script src="app.js?v=42"></script>
 
     <!-- Service Worker Registration -->
     <script>
@@ -405,7 +624,7 @@
                     console.log('Gefundene Caches:', cacheNames);
                     for (const cacheName of cacheNames) {
                         // Lösche alle alten Cache-Versionen (v1-v13)
-                        if (cacheName !== 'krafttraining-v41') {
+                        if (cacheName !== 'krafttraining-v42') {
                             console.log('Lösche alten Cache:', cacheName);
                             await caches.delete(cacheName);
                         }
@@ -415,7 +634,7 @@
                 }
 
                 // Service Worker registrieren
-                navigator.serviceWorker.register('/service-worker.js?v=41')
+                navigator.serviceWorker.register('/service-worker.js?v=42')
                     .then(registration => {
                         console.log('Service Worker registriert:', registration);
 

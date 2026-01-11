@@ -2690,7 +2690,8 @@ tabButtons.forEach(button => {
             'plan': 'planTab',
             'records': 'recordsTab',
             'stats': 'statsTab',
-            'settings': 'settingsTab'
+            'settings': 'settingsTab',
+            'info': 'infoTab'
         };
 
         const targetTab = document.getElementById(tabMap[tabName]);
@@ -3096,6 +3097,391 @@ async function initApp() {
 
     console.log('✅ App vollständig geladen und bereit!');
 }
+
+// ========================================
+// NEUE AUTH MODAL FUNKTIONEN
+// ========================================
+
+// Modal-Views wechseln
+function showLoginView() {
+    document.getElementById('loginView').style.display = 'block';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+    document.getElementById('verificationSentView').style.display = 'none';
+    clearAuthErrors();
+}
+
+function showRegisterView() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'block';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+    document.getElementById('verificationSentView').style.display = 'none';
+    clearAuthErrors();
+}
+
+function showForgotPasswordView() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('forgotPasswordView').style.display = 'block';
+    document.getElementById('verificationSentView').style.display = 'none';
+    clearAuthErrors();
+}
+
+function showVerificationSentView(email) {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('registerView').style.display = 'none';
+    document.getElementById('forgotPasswordView').style.display = 'none';
+    document.getElementById('verificationSentView').style.display = 'block';
+    document.getElementById('verificationEmailText').innerHTML =
+        `Wir haben eine Bestätigungs-E-Mail an <strong>${email}</strong> gesendet. Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.`;
+}
+
+function clearAuthErrors() {
+    const errorElements = ['loginError', 'registerError', 'resetError', 'resetSuccess'];
+    errorElements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = 'none';
+            el.textContent = '';
+        }
+    });
+}
+
+function showAuthError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+}
+
+function showAuthSuccess(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = message;
+        el.style.display = 'block';
+    }
+}
+
+// Passwort-Validierung
+function validatePassword(password) {
+    const checks = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    };
+
+    return {
+        valid: Object.values(checks).every(v => v),
+        checks: checks
+    };
+}
+
+function updatePasswordRequirements(password) {
+    const validation = validatePassword(password);
+
+    const requirements = [
+        { id: 'reqLength', valid: validation.checks.length },
+        { id: 'reqUppercase', valid: validation.checks.uppercase },
+        { id: 'reqLowercase', valid: validation.checks.lowercase },
+        { id: 'reqNumber', valid: validation.checks.number },
+        { id: 'reqSpecial', valid: validation.checks.special }
+    ];
+
+    requirements.forEach(req => {
+        const el = document.getElementById(req.id);
+        if (el) {
+            if (req.valid) {
+                el.classList.add('valid');
+                el.textContent = el.textContent.replace('○', '✓');
+            } else {
+                el.classList.remove('valid');
+                el.textContent = el.textContent.replace('✓', '○');
+            }
+        }
+    });
+
+    return validation.valid;
+}
+
+// Firebase Fehler übersetzen
+function translateAuthError(error) {
+    const errorMap = {
+        'auth/user-not-found': 'E-Mail oder Passwort ist falsch',
+        'auth/wrong-password': 'E-Mail oder Passwort ist falsch',
+        'auth/invalid-credential': 'E-Mail oder Passwort ist falsch',
+        'auth/invalid-email': 'Ungültige E-Mail-Adresse',
+        'auth/weak-password': 'Das Passwort ist zu schwach',
+        'auth/email-already-in-use': 'Diese E-Mail-Adresse ist bereits registriert',
+        'auth/too-many-requests': 'Zu viele Anmeldeversuche. Bitte später erneut versuchen.',
+        'auth/popup-closed-by-user': 'Anmeldung abgebrochen',
+        'auth/operation-not-allowed': 'Diese Anmeldemethode ist nicht aktiviert',
+        'auth/network-request-failed': 'Netzwerkfehler. Bitte Internetverbindung prüfen.'
+    };
+    return errorMap[error.code] || error.message || 'Ein Fehler ist aufgetreten';
+}
+
+// Event Listener für neue Modal-Views
+function initNewAuthEventListeners() {
+    // Register Link
+    const registerLink = document.getElementById('registerLink');
+    if (registerLink) {
+        registerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showRegisterView();
+        });
+    }
+
+    // Back to Login from Register
+    const backToLoginLink = document.getElementById('backToLoginLink');
+    if (backToLoginLink) {
+        backToLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginView();
+        });
+    }
+
+    // Forgot Password Link
+    const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            document.getElementById('resetEmail').value = email;
+            showForgotPasswordView();
+        });
+    }
+
+    // Back to Login from Reset
+    const backToLoginFromReset = document.getElementById('backToLoginFromReset');
+    if (backToLoginFromReset) {
+        backToLoginFromReset.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginView();
+        });
+    }
+
+    // Back to Login from Verification
+    const backToLoginFromVerification = document.getElementById('backToLoginFromVerification');
+    if (backToLoginFromVerification) {
+        backToLoginFromVerification.addEventListener('click', (e) => {
+            e.preventDefault();
+            showLoginView();
+            hideLoginModal();
+        });
+    }
+
+    // Password input für Requirements
+    const registerPassword = document.getElementById('registerPassword');
+    if (registerPassword) {
+        registerPassword.addEventListener('input', (e) => {
+            updatePasswordRequirements(e.target.value);
+        });
+    }
+
+    // Register Form
+    const emailRegisterForm = document.getElementById('emailRegisterForm');
+    if (emailRegisterForm) {
+        emailRegisterForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerPasswordConfirm').value;
+
+            // Validierung
+            const validation = validatePassword(password);
+            if (!validation.valid) {
+                showAuthError('registerError', 'Bitte erfülle alle Passwort-Anforderungen');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAuthError('registerError', 'Passwörter stimmen nicht überein');
+                return;
+            }
+
+            const submitBtn = document.getElementById('registerSubmitBtn');
+            submitBtn.textContent = 'Registriere...';
+            submitBtn.disabled = true;
+
+            try {
+                if (typeof window.registerWithEmail === 'function') {
+                    await window.registerWithEmail(email, password);
+                    showVerificationSentView(email);
+                } else {
+                    showAuthError('registerError', 'Registrierung nicht verfügbar');
+                }
+            } catch (error) {
+                showAuthError('registerError', translateAuthError(error));
+            } finally {
+                submitBtn.textContent = 'Registrieren';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // Login Form
+    const emailLoginForm = document.getElementById('emailLoginForm');
+    if (emailLoginForm) {
+        // Entferne alte Listener durch Klonen
+        const newForm = emailLoginForm.cloneNode(true);
+        emailLoginForm.parentNode.replaceChild(newForm, emailLoginForm);
+
+        newForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            submitBtn.textContent = 'Anmelden...';
+            submitBtn.disabled = true;
+
+            try {
+                if (typeof window.loginWithEmail === 'function') {
+                    await window.loginWithEmail(email, password);
+                } else {
+                    showAuthError('loginError', 'Login nicht verfügbar');
+                }
+            } catch (error) {
+                showAuthError('loginError', translateAuthError(error));
+            } finally {
+                submitBtn.textContent = 'Anmelden';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // Forgot Password Form
+    const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+    if (forgotPasswordForm) {
+        forgotPasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+
+            const submitBtn = document.getElementById('resetSubmitBtn');
+            submitBtn.textContent = 'Wird gesendet...';
+            submitBtn.disabled = true;
+
+            try {
+                if (typeof window.resetPassword === 'function') {
+                    await window.resetPassword(email);
+                    showAuthSuccess('resetSuccess', 'E-Mail zum Zurücksetzen des Passworts wurde gesendet. Prüfe deinen Posteingang.');
+                } else {
+                    showAuthError('resetError', 'Passwort-Reset nicht verfügbar');
+                }
+            } catch (error) {
+                showAuthError('resetError', translateAuthError(error));
+            } finally {
+                submitBtn.textContent = 'Link senden';
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}
+
+// Zu Einstellungen wechseln (für Info-Tab Link)
+function switchToSettings() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.classList.remove('active'));
+
+    const settingsTab = document.querySelector('[data-tab="settings"]');
+    const settingsContent = document.getElementById('settingsTab');
+
+    if (settingsTab) settingsTab.classList.add('active');
+    if (settingsContent) settingsContent.classList.add('active');
+
+    return false;
+}
+
+// Speichermodus-Auswahl initialisieren
+function initStorageModeSelection() {
+    const cloudOption = document.querySelector('input[name="storageMode"][value="cloud"]');
+    const localOption = document.querySelector('input[name="storageMode"][value="local"]');
+    const statusEl = document.getElementById('storageModeStatus');
+
+    if (cloudOption) {
+        cloudOption.addEventListener('change', () => {
+            if (cloudOption.checked) {
+                setStorageMode('cloud');
+                if (statusEl) {
+                    statusEl.textContent = 'Cloud-Speicherung aktiviert. Deine Daten werden synchronisiert.';
+                    statusEl.className = 'storage-status success';
+                }
+            }
+        });
+    }
+
+    if (localOption) {
+        localOption.addEventListener('change', () => {
+            if (localOption.checked) {
+                const confirmed = confirm(
+                    '⚠️ ACHTUNG: Lokaler Speichermodus\n\n' +
+                    'Bei lokaler Speicherung:\n' +
+                    '• Daten werden NUR auf diesem Gerät gespeichert\n' +
+                    '• Kein Sync zwischen Geräten möglich\n' +
+                    '• Bei Geräteverlust sind alle Daten verloren\n\n' +
+                    'Möchtest du wirklich zum lokalen Modus wechseln?'
+                );
+
+                if (confirmed) {
+                    setStorageMode('local');
+                    if (statusEl) {
+                        statusEl.textContent = 'Lokale Speicherung aktiviert. Neue Daten werden nur auf diesem Gerät gespeichert.';
+                        statusEl.className = 'storage-status success';
+                    }
+                } else {
+                    // Zurück zu Cloud
+                    cloudOption.checked = true;
+                }
+            }
+        });
+    }
+
+    // Aktuelle Einstellung laden
+    const currentMode = localStorage.getItem('storageMode') || 'cloud';
+    if (currentMode === 'local' && localOption) {
+        localOption.checked = true;
+    } else if (cloudOption) {
+        cloudOption.checked = true;
+    }
+}
+
+function setStorageMode(mode) {
+    localStorage.setItem('storageMode', mode);
+    console.log('Speichermodus gesetzt auf:', mode);
+
+    // Info-Tab aktualisieren
+    const infoEl = document.getElementById('currentStorageInfo');
+    if (infoEl) {
+        if (mode === 'cloud') {
+            infoEl.innerHTML = 'Kreuzheben nutzt derzeit die <strong>Cloud-Speicherung</strong> mit lokalem Cache.';
+        } else {
+            infoEl.innerHTML = 'Kreuzheben nutzt derzeit <strong>nur lokale Speicherung</strong>. Deine Daten werden nicht synchronisiert.';
+        }
+    }
+}
+
+function getStorageMode() {
+    return localStorage.getItem('storageMode') || 'cloud';
+}
+
+// Global verfügbar machen
+window.switchToSettings = switchToSettings;
+window.showLoginView = showLoginView;
+window.showRegisterView = showRegisterView;
+window.setStorageMode = setStorageMode;
+window.getStorageMode = getStorageMode;
+
+// Neue Event Listener nach App-Start initialisieren
+setTimeout(() => {
+    initNewAuthEventListeners();
+    initStorageModeSelection();
+}, 100);
 
 // App starten
 initApp();

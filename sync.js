@@ -1174,6 +1174,12 @@ function showUserInfo(user) {
       passwordSection.style.display = isEmailUser ? 'block' : 'none';
     }
   }
+
+  // Speichermodus-Sektion anzeigen
+  const storageModeSection = document.getElementById('storageModeSection');
+  if (storageModeSection) {
+    storageModeSection.style.display = 'block';
+  }
 }
 
 // Benutzer-Info verstecken
@@ -1199,6 +1205,12 @@ function hideUserInfo() {
   if (accountSettings) {
     accountSettings.style.display = 'none';
   }
+
+  // Speichermodus-Sektion verstecken
+  const storageModeSection = document.getElementById('storageModeSection');
+  if (storageModeSection) {
+    storageModeSection.style.display = 'none';
+  }
 }
 
 // Login-Modal anzeigen
@@ -1209,6 +1221,22 @@ function showLoginModal() {
   if (modal) {
     modal.style.display = 'flex';
     console.log('Login-Modal erfolgreich geöffnet');
+
+    // Zurück zur Login-Ansicht (falls andere Views offen waren)
+    if (typeof window.showLoginView === 'function') {
+      window.showLoginView();
+    } else {
+      // Fallback: Manuell zurücksetzen
+      const loginView = document.getElementById('loginView');
+      const registerView = document.getElementById('registerView');
+      const forgotView = document.getElementById('forgotPasswordView');
+      const verificationView = document.getElementById('verificationSentView');
+
+      if (loginView) loginView.style.display = 'block';
+      if (registerView) registerView.style.display = 'none';
+      if (forgotView) forgotView.style.display = 'none';
+      if (verificationView) verificationView.style.display = 'none';
+    }
   } else {
     console.error('Login-Modal Element nicht gefunden!');
   }
