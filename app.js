@@ -668,6 +668,16 @@ function displayTrainings() {
         return;
     }
 
+    // Suchbegriff prüfen
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    // Bei Suche: Alle Trainings durchsuchen, nach Datum gruppiert anzeigen
+    if (searchTerm) {
+        displaySearchResults(searchTerm);
+        return;
+    }
+
+    // Ohne Suche: Normales Verhalten (nur ausgewählter Tag)
     // Sicherstellen, dass ein Datum ausgewählt ist
     if (!selectedHistoryDate && allDates.length > 0) {
         selectedHistoryDate = allDates[0];
@@ -679,18 +689,10 @@ function displayTrainings() {
     // Trainings für den ausgewählten Tag
     let trainingsOfDay = trainings.filter(t => t.date === selectedHistoryDate);
 
-    // Suchfilter anwenden (falls Suchbegriff eingegeben)
-    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    if (searchTerm) {
-        trainingsOfDay = trainingsOfDay.filter(training =>
-            training.exercise.toLowerCase().includes(searchTerm)
-        );
-    }
-
     if (trainingsOfDay.length === 0) {
         trainingList.innerHTML = `
             <div class="empty-state">
-                <p>${searchTerm ? `Keine Übung "${searchTerm}" an diesem Tag gefunden.` : 'Keine Übungen für diesen Tag.'}</p>
+                <p>Keine Übungen für diesen Tag.</p>
             </div>
         `;
         return;
@@ -709,7 +711,37 @@ function displayTrainings() {
     const borgValue = dailyBorg ? dailyBorg.borgValue : null;
     const borgColor = borgValue ? (borgValue >= 7 ? '#6bcf7f' : borgValue >= 4 ? '#ffd93d' : '#ff6b6b') : '#999';
 
-    const trainingsHTML = trainingsOfDay.map(training => {
+    const trainingsHTML = renderTrainingItems(trainingsOfDay);
+
+    trainingList.innerHTML = `
+        <div class="date-block">
+            <div class="date-header">
+                <div class="date-icon">📅</div>
+                <h3 class="date-title">${formattedDate}</h3>
+                <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
+            </div>
+            <div class="borg-day-container">
+                <label>Wie war das Training heute?</label>
+                <div class="borg-day-input">
+                    <input type="range" min="1" max="10" value="${borgValue || 5}"
+                           onchange="saveDailyBorg('${selectedHistoryDate}', this.value)"
+                           oninput="updateBorgDisplay('${selectedHistoryDate}', this.value)"
+                           class="borg-slider">
+                    <span class="borg-display" id="borg-${selectedHistoryDate}" style="color: ${borgColor}">
+                        ${borgValue ? borgValue + '/10' : '?/10'}
+                    </span>
+                </div>
+            </div>
+            <div class="date-trainings">
+                ${trainingsHTML}
+            </div>
+        </div>
+    `;
+}
+
+// Hilfsfunktion: Training-Items rendern
+function renderTrainingItems(trainingsList) {
+    return trainingsList.map(training => {
         const repsDisplay = Array.isArray(training.reps)
             ? training.reps.join(', ')
             : training.reps || '0';
@@ -763,30 +795,75 @@ function displayTrainings() {
             </div>
         `;
     }).join('');
+}
 
-    trainingList.innerHTML = `
-        <div class="date-block">
-            <div class="date-header">
-                <div class="date-icon">📅</div>
-                <h3 class="date-title">${formattedDate}</h3>
-                <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Übung' : 'Übungen'}</div>
+// Suchergebnisse anzeigen (alle Tage durchsuchen)
+function displaySearchResults(searchTerm) {
+    // Alle Trainings nach Suchbegriff filtern
+    const matchingTrainings = trainings.filter(training =>
+        training.exercise.toLowerCase().includes(searchTerm)
+    );
+
+    if (matchingTrainings.length === 0) {
+        trainingList.innerHTML = `
+            <div class="empty-state">
+                <p>Keine Übung "${searchTerm}" gefunden.</p>
+                <p class="search-hint">Suche in allen Trainingstagen.</p>
             </div>
-            <div class="borg-day-container">
-                <label>Wie war das Training heute?</label>
-                <div class="borg-day-input">
-                    <input type="range" min="1" max="10" value="${borgValue || 5}"
-                           onchange="saveDailyBorg('${selectedHistoryDate}', this.value)"
-                           oninput="updateBorgDisplay('${selectedHistoryDate}', this.value)"
-                           class="borg-slider">
-                    <span class="borg-display" id="borg-${selectedHistoryDate}" style="color: ${borgColor}">
-                        ${borgValue ? borgValue + '/10' : '?/10'}
-                    </span>
+        `;
+        return;
+    }
+
+    // Nach Datum gruppieren und sortieren (neueste zuerst)
+    const groupedByDate = {};
+    matchingTrainings.forEach(training => {
+        if (!groupedByDate[training.date]) {
+            groupedByDate[training.date] = [];
+        }
+        groupedByDate[training.date].push(training);
+    });
+
+    // Daten sortieren (neueste zuerst)
+    const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
+    // Gesamtanzahl berechnen
+    const totalCount = matchingTrainings.length;
+
+    // HTML für alle Tage generieren
+    const allDaysHTML = sortedDates.map(date => {
+        const trainingsOfDay = groupedByDate[date];
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleDateString('de-DE', {
+            weekday: 'short',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const trainingsHTML = renderTrainingItems(trainingsOfDay);
+
+        return `
+            <div class="date-block search-result-block">
+                <div class="date-header">
+                    <div class="date-icon">📅</div>
+                    <h3 class="date-title">${formattedDate}</h3>
+                    <div class="exercise-count">${trainingsOfDay.length} ${trainingsOfDay.length === 1 ? 'Eintrag' : 'Einträge'}</div>
+                </div>
+                <div class="date-trainings">
+                    ${trainingsHTML}
                 </div>
             </div>
-            <div class="date-trainings">
-                ${trainingsHTML}
+        `;
+    }).join('');
+
+    trainingList.innerHTML = `
+        <div class="search-results-header">
+            <div class="search-results-info">
+                <span class="search-icon">🔍</span>
+                <strong>${totalCount}</strong> Ergebnisse für "<em>${searchTerm}</em>" an <strong>${sortedDates.length}</strong> Tagen
             </div>
         </div>
+        ${allDaysHTML}
     `;
 }
 

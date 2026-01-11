@@ -454,6 +454,51 @@ select:focus {
     box-shadow: 0 6px 20px rgba(0,0,0,0.12);
 }
 
+/* Suchergebnisse Header */
+.search-results-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.search-results-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1rem;
+}
+
+.search-results-info .search-icon {
+    font-size: 1.3rem;
+}
+
+.search-results-info em {
+    font-style: normal;
+    background: rgba(255,255,255,0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.search-result-block {
+    margin-bottom: 15px;
+}
+
+.search-result-block .date-header {
+    padding: 12px 15px;
+}
+
+.search-result-block .date-title {
+    font-size: 1.1rem;
+}
+
+.search-hint {
+    font-size: 0.9rem;
+    color: #888;
+    margin-top: 5px;
+}
+
 /* Datum Header */
 .date-header {
     background: linear-gradient(135deg, #1a0033 0%, #8B00FF 50%, #FF1493 100%);
