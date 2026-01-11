@@ -2991,6 +2991,21 @@ async function initApp() {
         console.log('Google-Login Event Listener hinzugefügt');
     }
 
+    // Event Listener für Apple-Login-Button
+    const appleLoginButton = document.getElementById('appleLoginButton');
+    if (appleLoginButton) {
+        appleLoginButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            console.log('Apple-Login Button geklickt');
+            if (typeof window.loginWithApple === 'function') {
+                await window.loginWithApple();
+            } else {
+                console.error('loginWithApple Funktion nicht verfügbar - Firebase möglicherweise nicht geladen');
+            }
+        });
+        console.log('Apple-Login Event Listener hinzugefügt');
+    }
+
     // Direkte Login-Modal-Funktion (Fallback wenn sync.js nicht geladen)
     function openLoginModal() {
         console.log('openLoginModal aufgerufen');

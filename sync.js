@@ -934,6 +934,41 @@ async function loginWithGoogle() {
   }
 }
 
+// Login mit Apple
+async function loginWithApple() {
+  console.log('loginWithApple aufgerufen');
+
+  try {
+    // Prüfe ob Firebase konfiguriert ist
+    if (!auth) {
+      const errorMsg = '⚠️ Firebase Authentication nicht verfügbar. Bitte warten oder Seite neu laden.';
+      showNotification(errorMsg);
+      console.error('auth ist null oder undefined');
+      return;
+    }
+
+    console.log('Starte Apple Login...');
+    const provider = new firebase.auth.OAuthProvider('apple.com');
+    // Optional: Scopes für Name und E-Mail anfragen
+    provider.addScope('email');
+    provider.addScope('name');
+
+    const result = await auth.signInWithPopup(provider);
+    console.log('Apple Login erfolgreich:', result.user.email || result.user.displayName);
+    showNotification('✅ Erfolgreich mit Apple angemeldet!');
+    hideLoginModal();
+  } catch (error) {
+    console.error('Apple Login-Fehler:', error);
+    if (error.code === 'auth/popup-closed-by-user') {
+      showNotification('Login abgebrochen');
+    } else if (error.code === 'auth/operation-not-allowed') {
+      showNotification('❌ Apple-Anmeldung ist nicht aktiviert. Bitte Firebase Console prüfen.');
+    } else {
+      showNotification('Apple Login fehlgeschlagen: ' + error.message);
+    }
+  }
+}
+
 // Login mit E-Mail
 async function loginWithEmail(email, password) {
   try {
@@ -1277,6 +1312,7 @@ window.deletePlanFromCloud = deletePlanFromCloud;
 window.deleteBodyWeightFromCloud = deleteBodyWeightFromCloud;
 window.deleteDailyBorgFromCloud = deleteDailyBorgFromCloud;
 window.loginWithGoogle = loginWithGoogle;
+window.loginWithApple = loginWithApple;
 window.loginWithEmail = loginWithEmail;
 window.registerWithEmail = registerWithEmail;
 window.resetPassword = resetPassword;
